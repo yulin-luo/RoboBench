@@ -1,4 +1,4 @@
-<h1 align="center">RoboBench</h1>
+<h1 align="center">🤖 RoboBench</h1>
 
 <p align="center">
   <strong>A comprehensive evaluation benchmark for Multimodal Large Language Models as embodied robot brains.</strong>
@@ -15,16 +15,16 @@
 
 ---
 
-## Featured Resources
+## 📌 Featured Resources
 
-- **Paper**: [RoboBench: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models as Embodied Brain](https://arxiv.org/abs/2510.17801)
-- **Project website**: [robo-bench.github.io](https://robo-bench.github.io/)
-- **Dataset**: [LeoFan01/RoboBench](https://huggingface.co/datasets/LeoFan01/RoboBench)
-- **Code**: [github.com/yulin-luo/RoboBench](https://github.com/yulin-luo/RoboBench)
+- 📄 **Paper**: [RoboBench: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models as Embodied Brain](https://arxiv.org/abs/2510.17801)
+- 🌐 **Project website**: [robo-bench.github.io](https://robo-bench.github.io/)
+- 🤗 **Dataset**: [LeoFan01/RoboBench](https://huggingface.co/datasets/LeoFan01/RoboBench)
+- 💻 **Code**: [github.com/yulin-luo/RoboBench](https://github.com/yulin-luo/RoboBench)
 
 > Accepted to **ECCV 2026**.
 
-## Overview
+## 🔍 Overview
 
 RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied intelligence into diagnostic abilities rather than reporting only end-to-end task success. It covers the full execution pipeline from instruction comprehension and perception to generalized planning, affordance reasoning, and failure analysis.
 
@@ -32,7 +32,7 @@ RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied 
   <img src="https://robo-bench.github.io/static/images/teaser/teaser.png" alt="RoboBench overview" width="900">
 </p>
 
-### What RoboBench Provides
+### ✨ What RoboBench Provides
 
 - **Fine-grained embodied evaluation**: 5 cognitive dimensions and 14+ capability groups for diagnosing where MLLMs succeed or fail as robot brains.
 - **Cross-domain planning tests**: Robot morphology, object type, viewpoint, attributes, and world-knowledge generalization.
@@ -40,7 +40,7 @@ RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied 
 - **Reproducible package**: YAML-driven configuration, API inference, task-specific evaluators, checkpoint/resume, and multi-run aggregation.
 - **Reusable prompt pipeline**: Open prompt construction utilities for robotic video and image-based question answering.
 
-## Benchmark Dimensions
+## 🧭 Benchmark Dimensions
 
 | Dimension | Representative capabilities | Evaluation type |
 | --- | --- | --- |
@@ -50,7 +50,7 @@ RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied 
 | **Affordance Reasoning** | Static affordance, dynamic affordance, navigation visual prompts | Point / coordinate |
 | **Error Analysis** | High-level planning errors, low-level execution errors | Multi-choice |
 
-## Installation
+## ⚙️ Installation
 
 ```bash
 git clone https://github.com/yulin-luo/RoboBench.git
@@ -63,14 +63,14 @@ pip install -e .
 pip install -e ".[local]"
 ```
 
-### Requirements
+### 📦 Requirements
 
 - Python >= 3.10
 - API-compatible endpoint supported by the OpenAI Python client
 - OpenCV, PyYAML, Pydantic, NumPy, tqdm
 - Optional local-model stack: torch, transformers, pillow
 
-## Dataset
+## 📚 Dataset
 
 Download the released RoboBench dataset from Hugging Face and point the config to the local copy.
 
@@ -82,9 +82,9 @@ huggingface-cli download \
 
 The pipeline uses prompt-ready question JSONL files from `paths.middle_file_dir` and uses `paths.data_root` to resolve images and released `questions.json` metadata. If your dataset package stores these JSONL files outside `data/RoboBench-hf`, keep that directory as a sibling `data/middle_file`.
 
-## Quick Start
+## 🚀 Quick Start
 
-### 1. Prepare a Config
+### 1. 🛠️ Prepare a Config
 
 ```bash
 cp config/benchmark.example.yaml config/benchmark.yaml
@@ -100,7 +100,7 @@ export ROBOBENCH_OLD_IMAGE_PREFIX="/share/project/test/robobench/robobench/RoboB
 
 Edit `config/benchmark.yaml` to choose models, dimensions, and concurrency settings. Keep `config/benchmark.yaml` local; it is intentionally ignored by git.
 
-### 2. Run Inference
+### 2. 🧠 Run Inference
 
 The CLI uses a top-level `--config` argument before the subcommand.
 
@@ -125,7 +125,7 @@ robobench --config config/benchmark.yaml inference \
   --text-only
 ```
 
-### 3. Evaluate Existing Results
+### 3. 📊 Evaluate Existing Results
 
 ```bash
 robobench --config config/benchmark.yaml evaluate \
@@ -134,7 +134,7 @@ robobench --config config/benchmark.yaml evaluate \
 
 Remove `--max-samples` when running the full selected dimension.
 
-### 4. Run an End-to-End Pipeline
+### 4. 🔁 Run an End-to-End Pipeline
 
 ```bash
 robobench --config config/benchmark.yaml pipeline --repeats 3
@@ -142,11 +142,11 @@ robobench --config config/benchmark.yaml pipeline --repeats 3
 
 The full pipeline runs inference, evaluation, and aggregation across repeated runs configured by `runs.num_repeats`.
 
-## Configuration
+## 🧩 Configuration
 
 Most behavior is controlled from `config/benchmark.yaml`.
 
-### API Settings
+### 🔐 API Settings
 
 | Field | Description |
 | --- | --- |
@@ -157,7 +157,7 @@ Most behavior is controlled from `config/benchmark.yaml`.
 | `api.task_timeout` | Per-request timeout in seconds |
 | `api.retry_attempts` | Maximum retry attempts for transient failures |
 
-### Model Selection
+### 🧠 Model Selection
 
 ```yaml
 models:
@@ -170,7 +170,7 @@ text_only_variants:
     suffix: "text_only"
 ```
 
-### Dimension Selection
+### 🧪 Dimension Selection
 
 ```yaml
 dimensions:
@@ -183,7 +183,7 @@ dimensions:
       - spatial_relation
 ```
 
-### Paths
+### 📁 Paths
 
 | Field | Description |
 | --- | --- |
@@ -193,7 +193,7 @@ dimensions:
 | `paths.cache_dir` | Checkpoints and temporary files |
 | `paths.old_prefix` / `paths.new_prefix` | Image-path prefix rewrite for released dataset paths |
 
-## Project Structure
+## 🗂️ Project Structure
 
 ```text
 RoboBench/
@@ -213,7 +213,7 @@ RoboBench/
 └── README.md
 ```
 
-## Evaluation Metrics
+## 📏 Evaluation Metrics
 
 | Evaluator | What it checks |
 | --- | --- |
@@ -225,7 +225,7 @@ RoboBench/
 
 Planning evaluation can call an evaluator model, configured by `evaluation.planning.eval_model`, to judge action feasibility and task completion.
 
-## Prompt Builder Example
+## 💬 Prompt Builder Example
 
 ```python
 from robobench.prompts.builder import PromptBuilder
@@ -249,7 +249,7 @@ prompts = builder.build(questions, mode="base64")
 builder.save(prompts, "prompts.jsonl")
 ```
 
-## Development
+## 🛠️ Development
 
 ```bash
 pip install -e ".[dev]"
@@ -258,7 +258,7 @@ black src/
 ruff check src/
 ```
 
-## Citation
+## 📝 Citation
 
 If you use RoboBench in your research, please cite:
 
@@ -271,10 +271,10 @@ If you use RoboBench in your research, please cite:
 }
 ```
 
-## Acknowledgements
+## 🙏 Acknowledgements
 
 RoboBench builds on open-source tooling across the Python, Hugging Face, OpenAI-compatible API, and robotics research ecosystems. We thank the contributors and maintainers of these projects.
 
-## License
+## 📜 License
 
 This repository is released under the [MIT License](LICENSE).
