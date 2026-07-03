@@ -80,7 +80,7 @@ huggingface-cli download \
   --local-dir data/RoboBench-hf
 ```
 
-The pipeline expects prebuilt question files under the dataset's `middle_file` directory. The example config uses environment variables so private paths and API keys are not committed.
+The pipeline uses prompt-ready question JSONL files from `paths.middle_file_dir` and uses `paths.data_root` to resolve images and released `questions.json` metadata. If your dataset package stores these JSONL files outside `data/RoboBench-hf`, keep that directory as a sibling `data/middle_file`.
 
 ## Quick Start
 
@@ -92,10 +92,10 @@ cp config/benchmark.example.yaml config/benchmark.yaml
 export DUBRIFY_API_KEY="your-api-key"
 export ROBOBENCH_API_BASE_URL="https://your-endpoint/v1"
 export ROBOBENCH_DATA_ROOT="$PWD/data/RoboBench-hf"
-export ROBOBENCH_MIDDLE_FILE_DIR="$PWD/data/RoboBench-hf/middle_file"
+export ROBOBENCH_MIDDLE_FILE_DIR="$PWD/data/middle_file"
 export ROBOBENCH_RESULTS_ROOT="$PWD/results"
 export ROBOBENCH_CACHE_DIR="$PWD/cache"
-export ROBOBENCH_OLD_IMAGE_PREFIX="/share/project/test/robobench/robobench"
+export ROBOBENCH_OLD_IMAGE_PREFIX="/share/project/test/robobench/robobench/RoboBench-hf"
 ```
 
 Edit `config/benchmark.yaml` to choose models, dimensions, and concurrency settings. Keep `config/benchmark.yaml` local; it is intentionally ignored by git.
@@ -108,7 +108,9 @@ The CLI uses a top-level `--config` argument before the subcommand.
 robobench --config config/benchmark.yaml inference \
   --model gpt-5.4 \
   --dimension perception_reasoning \
-  --run-id run_0
+  --subtask static_attribute \
+  --max-samples 1 \
+  --run-id smoke_test
 ```
 
 For text-only ablation:
@@ -117,6 +119,8 @@ For text-only ablation:
 robobench --config config/benchmark.yaml inference \
   --model gpt-5.4 \
   --dimension perception_reasoning \
+  --subtask static_attribute \
+  --max-samples 1 \
   --run-id run_0_text_only \
   --text-only
 ```
@@ -127,6 +131,8 @@ robobench --config config/benchmark.yaml inference \
 robobench --config config/benchmark.yaml evaluate \
   --dimension perception_reasoning
 ```
+
+Remove `--max-samples` when running the full selected dimension.
 
 ### 4. Run an End-to-End Pipeline
 
@@ -227,7 +233,7 @@ from robobench.prompts.builder import PromptBuilder
 builder = PromptBuilder(
     data_root="data/RoboBench-hf",
     system_prompt_key="skill_list",
-    old_prefix="/share/project/test/robobench/robobench",
+    old_prefix="/share/project/test/robobench/robobench/RoboBench-hf",
     new_prefix="data/RoboBench-hf",
 )
 

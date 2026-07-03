@@ -67,7 +67,7 @@ class PathConfig(BaseModel):
     cache_dir: str = "cache"
     # Prefix embedded in the released dataset's image paths; rewritten to `new_prefix`
     # (falls back to `data_root`) so images resolve against your local dataset copy.
-    old_prefix: str = "/share/project/test/robobench/robobench"
+    old_prefix: str = "/share/project/test/robobench/robobench/RoboBench-hf"
     new_prefix: str = ""
 
     @field_validator("data_root", "middle_file_dir", "results_root", "cache_dir")

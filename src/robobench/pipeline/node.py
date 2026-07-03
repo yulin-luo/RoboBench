@@ -86,12 +86,13 @@ class LoadDatasetNode(PipelineNode):
 
         dimension = inputs["dimension"]
         subtask = inputs.get("subtask", "")
+        max_samples = inputs.get("max_samples")
         paths = self.context.config.paths
         dataset = RoboBenchDataset(
             data_root=paths.data_root,
             middle_file_dir=getattr(paths, "middle_file_dir", ""),
         )
-        questions = dataset.load_questions(dimension, subtask)
+        questions = dataset.load_questions(dimension, subtask, max_samples=max_samples)
         metadata = dataset.load_metadata(dimension, subtask)
         return {"questions": questions, "metadata": metadata}
 
@@ -145,10 +146,15 @@ class RunInferenceNode(PipelineNode):
         prompts_path = inputs["prompts"]
         model_name = inputs["model_name"]
         use_vision = inputs.get("vision", True)
+        dimension = inputs.get("dimension", "")
+        subtask = inputs.get("subtask", "")
+        task_label = "_".join(part for part in [dimension, subtask] if part) or "all"
+        safe_task_label = task_label.replace("/", "_").replace("-", "_")
+        safe_model_name = model_name.replace("/", "_").replace("-", "_")
 
         client = AsyncModelClient(self.context.config.api)
         checkpoint = CheckpointManager(
-            self.context.get_temp_path(f"checkpoint_{model_name}.json")
+            self.context.get_temp_path(f"checkpoint_{safe_model_name}_{safe_task_label}.json")
         )
 
         # Load prompts from file
@@ -163,13 +169,25 @@ class RunInferenceNode(PipelineNode):
                 use_vision=use_vision,
                 checkpoint=checkpoint,
                 save_path=str(
-                    self.context.get_temp_path(f"temp_{model_name.replace('/', '_').replace('-', '_')}")
+                    self.context.get_temp_path(f"temp_{safe_model_name}_{safe_task_label}")
                 ),
             )
         )
 
         # Save results
-        result_path = self.context.get_result_path(model_name, suffix="raw.json")
+        for idx, result in enumerate(results):
+            if not isinstance(result, dict) or idx >= len(prompts):
+                continue
+            prompt = prompts[idx]
+            raw_question = prompt.get("raw_question") or {}
+            result.setdefault("request_id", prompt.get("request_id", result.get("id")))
+            if raw_question:
+                result.setdefault("raw_question", raw_question)
+                for key in ("gt_answer", "ground_truth", "question_type", "task_type", "options"):
+                    if raw_question.get(key) is not None:
+                        result.setdefault(key, raw_question[key])
+
+        result_path = self.context.get_result_path(model_name, suffix=f"{safe_task_label}/raw.json")
         with open(result_path, "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
 
@@ -190,6 +208,7 @@ class EvaluateNode(PipelineNode):
 
     def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         import json
+        from pathlib import Path
 
         from robobench.evaluation.base import get_evaluator
 

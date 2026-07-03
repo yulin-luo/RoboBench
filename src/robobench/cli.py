@@ -62,10 +62,11 @@ def cmd_inference(args):
 
             initial = {
                 "dimension": dim_name,
-                "subtask": "",
+                "subtask": args.subtask or "",
                 "dimension_config": dim_config,
                 "model_name": model_name,
                 "vision": not args.text_only,
+                "max_samples": args.max_samples,
             }
             executor.run(initial)
 
@@ -92,12 +93,14 @@ def cmd_evaluate(args):
         else:
             eval_cfg = {}
 
-        # Find result files for this dimension
+        # Find result files for this dimension.
         results_dir = Path(config.paths.results_root)
-        for model_dir in results_dir.glob("*"):
-            raw_path = model_dir / "raw.json"
-            if not raw_path.exists():
-                continue
+        raw_paths = sorted(results_dir.rglob("raw.json"))
+        if not raw_paths:
+            print(f"  No raw.json files found under {results_dir}")
+
+        for raw_path in raw_paths:
+            print(f"  Evaluating file: {raw_path}")
 
             context = RunContext(run_id="eval", config=config)
             executor = PipelineExecutor(context)
@@ -115,6 +118,19 @@ def cmd_pipeline(args):
     """Run full benchmark pipeline end-to-end."""
     config = _load_config(args)
     repeats = args.repeats or config.runs.num_repeats
+
+    if args.dry_run:
+        executor = PipelineExecutor(RunContext(run_id="dry_run", config=config))
+        executor.add_node(LoadDatasetNode)
+        executor.add_node(BuildPromptsNode)
+        executor.add_node(RunInferenceNode)
+        executor.add_node(EvaluateNode)
+        if repeats > 1:
+            executor.add_node(AggregateScoresNode)
+        print("Pipeline graph:")
+        for node_name in executor.dry_run():
+            print(f"  - {node_name}")
+        return
 
     print(f"Running full pipeline with {repeats} repeats")
 
@@ -150,12 +166,13 @@ def cmd_pipeline(args):
 
                 initial = {
                     "dimension": dim_name,
-                    "subtask": "",
+                    "subtask": args.subtask or "",
                     "dimension_config": dim_config,
                     "model_name": model_name,
                     "vision": True,
                     "eval_type": eval_type,
                     "eval_config": eval_cfg,
+                    "max_samples": args.max_samples,
                 }
                 executor.run(initial)
 
@@ -215,6 +232,12 @@ def main():
     p_inference.add_argument(
         "--dimension", nargs="+", help="Specific dimensions to run"
     )
+    p_inference.add_argument("--subtask", help="Specific subtask name/file fragment to run")
+    p_inference.add_argument(
+        "--max-samples",
+        type=int,
+        help="Maximum number of questions to load per selected dimension",
+    )
     p_inference.add_argument("--run-id", help="Run identifier")
     p_inference.add_argument(
         "--text-only", action="store_true", help="Run without vision (text-only ablation)"
@@ -230,6 +253,12 @@ def main():
     p_pipeline = subparsers.add_parser("pipeline", help="Run full benchmark pipeline")
     p_pipeline.add_argument(
         "--repeats", type=int, help="Number of repeated runs (overrides config)"
+    )
+    p_pipeline.add_argument("--subtask", help="Specific subtask name/file fragment to run")
+    p_pipeline.add_argument(
+        "--max-samples",
+        type=int,
+        help="Maximum number of questions to load per selected dimension",
     )
     p_pipeline.add_argument(
         "--dry-run", action="store_true", help="Show pipeline graph without executing"

@@ -28,7 +28,7 @@ class PromptBuilder:
         self,
         data_root: str = "",
         system_prompt_key: str = "",
-        old_prefix: str = "/share/project/test/robobench/robobench",
+        old_prefix: str = "/share/project/test/robobench/robobench/RoboBench-hf",
         new_prefix: str = "",
     ):
         self.data_root = data_root

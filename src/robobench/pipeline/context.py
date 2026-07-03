@@ -40,7 +40,9 @@ class RunContext:
     def get_result_path(self, model_name: str, suffix: str = "raw.json") -> Path:
         """Get a result file path for a model."""
         result_dir = self.get_results_dir(model_name)
-        return result_dir / suffix
+        path = result_dir / suffix
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
 
     def set_metadata(self, key: str, value: Any) -> None:
         """Store metadata for this run."""

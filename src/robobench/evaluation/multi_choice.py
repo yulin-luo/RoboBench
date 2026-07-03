@@ -11,8 +11,6 @@ import json
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from openai import OpenAI
-
 from .base import BaseEvaluator, register_evaluator
 
 
@@ -26,6 +24,8 @@ class MultiChoiceEvaluator(BaseEvaluator):
         self.gpt_model = gpt_model
         self.openai_client = None
         if api_key:
+            from openai import OpenAI
+
             self.openai_client = OpenAI(base_url=base_url or "https://api.openai.com/v1", api_key=api_key)
 
     def evaluate(
