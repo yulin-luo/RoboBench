@@ -1,0 +1,43 @@
+# Large files and archives
+*.tar
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# Logs
+*.log
+
+# Temporary / cache files
+cache/
+*.tmp
+
+# Benchmark data (download from HF LeoFan01/RoboBench, too large to commit)
+data/
+!data/.gitkeep
+
+# Model outputs
+results/
+
+# Local secrets / private config (API keys, never commit)
+config/*.local.yaml
+config/*.local.yml
+config/benchmark.yaml
+*.local.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+.eggs/
+.ipynb_checkpoints/
+.pytest_cache/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

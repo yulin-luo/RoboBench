@@ -1,0 +1,157 @@
+# RoboBench example benchmark configuration.
+# Copy this file to config/benchmark.yaml and set the required environment
+# variables before running inference or evaluation.
+
+api:
+  base_url: "${ROBOBENCH_API_BASE_URL}"
+  api_key: "${DUBRIFY_API_KEY}"
+  max_concurrent: 4
+  api_max_concurrent: 4
+  task_timeout: 960
+  retry_attempts: 10
+  retry_backoff:
+    multiplier: 1
+    min: 1
+    max: 10
+
+models:
+  - name: "gpt-5.4"
+    provider: "openai"
+    vision: true
+  - name: "gpt-5.2"
+    provider: "openai"
+    vision: true
+  - name: "gpt-5"
+    provider: "openai"
+    vision: true
+  - name: "gpt-4.1"
+    provider: "openai"
+    vision: true
+  - name: "o3"
+    provider: "openai"
+    vision: true
+  - name: "gpt-4o"
+    provider: "openai"
+    vision: true
+  - name: "gpt-4o-mini"
+    provider: "openai"
+    vision: true
+  - name: "claude-opus-4-7"
+    provider: "anthropic"
+    vision: true
+  - name: "claude-sonnet-4-6"
+    provider: "anthropic"
+    vision: true
+  - name: "claude-sonnet-4-5-20250929"
+    provider: "anthropic"
+    vision: true
+  - name: "claude-haiku-4-5-20251001"
+    provider: "anthropic"
+    vision: true
+  - name: "gemini-3.1-pro-preview"
+    provider: "google"
+    vision: true
+  - name: "gemini-2.5-pro"
+    provider: "google"
+    vision: true
+  - name: "gemini-2.5-flash"
+    provider: "google"
+    vision: true
+
+text_only_variants:
+  - name: "gpt-5.4"
+    suffix: "text_only"
+
+runs:
+  num_repeats: 3
+  seed_strategy: "incremental"
+  skip_existing: true
+
+paths:
+  data_root: "${ROBOBENCH_DATA_ROOT}"
+  middle_file_dir: "${ROBOBENCH_MIDDLE_FILE_DIR}"
+  results_root: "${ROBOBENCH_RESULTS_ROOT}"
+  cache_dir: "${ROBOBENCH_CACHE_DIR}"
+  old_prefix: "${ROBOBENCH_OLD_IMAGE_PREFIX}"
+  new_prefix: "${ROBOBENCH_DATA_ROOT}"
+
+dimensions:
+  instruction_comprehension:
+    enabled: true
+    eval_type: "planning"
+    system_prompt_key: "instruction"
+    subtasks:
+      - explicit_object_goal
+      - implicit_demand_goal
+      - cross_task_navigation
+
+  perception_reasoning:
+    enabled: true
+    eval_type: "multi_choice"
+    system_prompt_key: "perception"
+    subtasks:
+      - static_attribute
+      - tool_usage
+      - robotic_type
+      - robotic_view
+      - spatial_relation
+      - spatial_temporal_causality
+      - timestamp_analysis
+      - task_instruction_comprehension
+
+  generalized_planning:
+    enabled: true
+    eval_type: "planning"
+    system_prompt_key: "skill_list"
+    subtasks:
+      - single_arm
+      - dual_arm
+      - mobile_manipulation
+      - human
+      - rigid
+      - articulated
+      - deformable
+      - multi_object
+      - special
+      - color
+      - number
+      - shape
+      - size
+      - world_knowledge
+      - navigation
+      - single_view
+      - multi_view
+
+  affordance_reasoning:
+    enabled: true
+    eval_type: "point"
+    system_prompt_key: "affordance_point"
+    subtasks:
+      - static_affordance
+      - dynamic_affordance
+      - navigation_visual_prompt
+
+  error_analysis:
+    enabled: true
+    eval_type: "multi_choice"
+    system_prompt_key: "error_analysis"
+    subtasks:
+      - high_level_planning_error
+      - low_level_execution_error
+
+evaluation:
+  planning:
+    eval_model: "gpt-4o"
+    use_cache: true
+
+  multi_choice:
+    normalize_with_gpt: true
+    gpt_model: "gpt-4o"
+
+output:
+  save_raw_responses: true
+  report_formats:
+    - json
+    - csv
+    - markdown
+  per_task_breakdown: true

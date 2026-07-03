@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robobench"
+version = "2.0.0"
+description = "RoboBench: A comprehensive benchmark for evaluating MLLMs on robotic manipulation tasks"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "RoboBench Team"},
+]
+keywords = ["benchmark", "robotics", "mllm", "vlm", "embodied-ai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "openai>=1.0",
+    "aiofiles>=23.0",
+    "tenacity>=8.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "opencv-python>=4.8",
+    "numpy>=1.24",
+    "tqdm>=4.65",
+]
+
+[project.optional-dependencies]
+local = [
+    "torch>=2.0",
+    "transformers>=4.40",
+    "pillow>=10.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "black>=23.0",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+robobench = "robobench.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yulin-luo/RoboBench"
+Repository = "https://github.com/yulin-luo/RoboBench"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I"]
