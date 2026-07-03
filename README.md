@@ -1,276 +1,255 @@
-# RoboBench
+<h1 align="center">RoboBench</h1>
 
-**RoboBench** is a comprehensive benchmark for evaluating Multimodal Large Language Models (MLLMs) as embodied intelligence on robotic manipulation tasks. It covers the full execution pipeline from instruction comprehension and perception to planning, affordance reasoning, and failure analysis.
+<p align="center">
+  <strong>A comprehensive evaluation benchmark for Multimodal Large Language Models as embodied robot brains.</strong>
+</p>
 
-> Accepted to **ECCV 2026**. Project page: https://robobench.github.io
+<p align="center">
+  <a href="https://arxiv.org/abs/2510.17801"><img src="https://img.shields.io/badge/arXiv-2510.17801-b31b1b.svg?style=flat&logo=arxiv&logoColor=white" alt="arXiv"></a>
+  <a href="https://robo-bench.github.io/"><img src="https://img.shields.io/badge/Project-Website-brightgreen.svg?style=flat&logo=githubpages&logoColor=white" alt="Project website"></a>
+  <a href="https://huggingface.co/datasets/LeoFan01/RoboBench"><img src="https://img.shields.io/badge/Dataset-HuggingFace-yellow.svg?style=flat&logo=huggingface&logoColor=black" alt="Dataset"></a>
+  <a href="https://github.com/yulin-luo/RoboBench/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?style=flat&logo=python&logoColor=white" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/ECCV-2026-purple.svg?style=flat" alt="ECCV 2026">
+</p>
+
+---
+
+## Featured Resources
+
+- **Paper**: [RoboBench: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models as Embodied Brain](https://arxiv.org/abs/2510.17801)
+- **Project website**: [robo-bench.github.io](https://robo-bench.github.io/)
+- **Dataset**: [LeoFan01/RoboBench](https://huggingface.co/datasets/LeoFan01/RoboBench)
+- **Code**: [github.com/yulin-luo/RoboBench](https://github.com/yulin-luo/RoboBench)
+
+> Accepted to **ECCV 2026**.
 
 ## Overview
 
-Existing robotic benchmarks primarily measure end-to-end task success rates. RoboBench takes a different approach: it decomposes embodied intelligence into **5 cognitive dimensions** and **14+ fine-grained capabilities**, providing a systematic diagnostic of where MLLMs excel and where they fall short as robotic "brains".
+RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied intelligence into diagnostic abilities rather than reporting only end-to-end task success. It covers the full execution pipeline from instruction comprehension and perception to generalized planning, affordance reasoning, and failure analysis.
 
-### 5 Dimensions, 14+ Capabilities
+<p align="center">
+  <img src="https://robo-bench.github.io/static/images/teaser/teaser.png" alt="RoboBench overview" width="900">
+</p>
 
-| Dimension | Capabilities | Eval Type |
-|-----------|-------------|-----------|
-| **Instruction Comprehension** | Explicit goal, Implicit demand, Cross-task navigation | Planning |
-| **Perception & Reasoning** | Object attributes, Spatial relation, Temporal causality, Robot type/view | Multi-choice |
-| **Generalized Planning** | Cross-embodiment (single/dual arm, mobile, human), Cross-object (rigid, articulated, deformable), Cross-view (single/multi), Cross-attribute (color, shape, size, number), World knowledge | Planning (Q1/Q2/Q3) |
-| **Affordance Reasoning** | Static affordance, Dynamic affordance, Navigation visual prompt | Point / Coordinate |
-| **Error Analysis** | High-level planning error, Low-level execution error | Multi-choice |
+### What RoboBench Provides
 
-### Key Features
+- **Fine-grained embodied evaluation**: 5 cognitive dimensions and 14+ capability groups for diagnosing where MLLMs succeed or fail as robot brains.
+- **Cross-domain planning tests**: Robot morphology, object type, viewpoint, attributes, and world-knowledge generalization.
+- **MLLM-as-world-simulator evaluation**: Planning outputs are judged with a simulator-style MLLM evaluator for physically grounded task completion.
+- **Reproducible package**: YAML-driven configuration, API inference, task-specific evaluators, checkpoint/resume, and multi-run aggregation.
+- **Reusable prompt pipeline**: Open prompt construction utilities for robotic video and image-based question answering.
 
-- **Decomposed evaluation**: Isolates cognitive capabilities instead of only measuring task success
-- **Cross-domain generalization**: Tests planning across robot morphologies, object types, and camera viewpoints
-- **MLLM-as-World-Simulator**: For planning evaluation, uses an MLLM to simulate whether generated plans would physically succeed
-- **Reproducible pipeline**: Single YAML configuration drives the entire benchmark
-- **3-run averaging**: Built-in support for running each model 3 times with statistical aggregation
-- **Open-source prompts**: Modular prompt construction library that can be reused for other robotic video analysis tasks
+## Benchmark Dimensions
+
+| Dimension | Representative capabilities | Evaluation type |
+| --- | --- | --- |
+| **Instruction Comprehension** | Explicit goals, implicit demands, cross-task navigation | Planning |
+| **Perception and Reasoning** | Object attributes, spatial relations, temporal causality, robot type/view | Multi-choice |
+| **Generalized Planning** | Cross-embodiment, cross-object, cross-view, cross-attribute, world knowledge | Planning Q1/Q2/Q3 |
+| **Affordance Reasoning** | Static affordance, dynamic affordance, navigation visual prompts | Point / coordinate |
+| **Error Analysis** | High-level planning errors, low-level execution errors | Multi-choice |
 
 ## Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/yulin-luo/RoboBench.git
 cd RoboBench
 
-# Install the package (core, API-based evaluation)
+# Core package for API-based inference and evaluation.
 pip install -e .
 
-# Optional: local HuggingFace model inference (torch / transformers)
+# Optional dependencies for local HuggingFace vision-language models.
 pip install -e ".[local]"
 ```
 
-### Dependencies
+### Requirements
 
 - Python >= 3.10
-- OpenAI Python client
-- OpenCV (for image processing)
-- PyYAML, Pydantic (for configuration)
-- NumPy (for statistics)
-- `torch` / `transformers` / `pillow` — only for local HuggingFace models (`[local]` extra)
+- API-compatible endpoint supported by the OpenAI Python client
+- OpenCV, PyYAML, Pydantic, NumPy, tqdm
+- Optional local-model stack: torch, transformers, pillow
 
-## Data
+## Dataset
 
-RoboBench data is hosted on the Hugging Face Hub. Download it and point `paths.data_root` in
-your config at the local copy:
+Download the released RoboBench dataset from Hugging Face and point the config to the local copy.
 
 ```bash
-huggingface-cli download --repo-type dataset LeoFan01/RoboBench --local-dir data/RoboBench-hf
+huggingface-cli download \
+  --repo-type dataset LeoFan01/RoboBench \
+  --local-dir data/RoboBench-hf
 ```
+
+The pipeline expects prebuilt question files under the dataset's `middle_file` directory. The example config uses environment variables so private paths and API keys are not committed.
 
 ## Quick Start
 
-### 1. Configure API Access
-
-Set your API key as an environment variable (substituted automatically in config):
-
-```bash
-export DUBRIFY_API_KEY="your-api-key"
-```
-
-Start from the example config and keep secrets in environment variables:
+### 1. Prepare a Config
 
 ```bash
 cp config/benchmark.example.yaml config/benchmark.yaml
+
+export DUBRIFY_API_KEY="your-api-key"
 export ROBOBENCH_API_BASE_URL="https://your-endpoint/v1"
-export ROBOBENCH_DATA_ROOT="/path/to/RoboBench/data"
-export ROBOBENCH_MIDDLE_FILE_DIR="/path/to/RoboBench/data/middle_file"
-export ROBOBENCH_RESULTS_ROOT="./results"
-export ROBOBENCH_CACHE_DIR="./cache"
+export ROBOBENCH_DATA_ROOT="$PWD/data/RoboBench-hf"
+export ROBOBENCH_MIDDLE_FILE_DIR="$PWD/data/RoboBench-hf/middle_file"
+export ROBOBENCH_RESULTS_ROOT="$PWD/results"
+export ROBOBENCH_CACHE_DIR="$PWD/cache"
+export ROBOBENCH_OLD_IMAGE_PREFIX="/share/project/test/robobench/robobench"
 ```
 
-### 2. Configure Models and Dimensions
+Edit `config/benchmark.yaml` to choose models, dimensions, and concurrency settings. Keep `config/benchmark.yaml` local; it is intentionally ignored by git.
 
-Edit `config/benchmark.yaml` to select which models and dimensions to evaluate:
+### 2. Run Inference
+
+The CLI uses a top-level `--config` argument before the subcommand.
+
+```bash
+robobench --config config/benchmark.yaml inference \
+  --model gpt-5.4 \
+  --dimension perception_reasoning \
+  --run-id run_0
+```
+
+For text-only ablation:
+
+```bash
+robobench --config config/benchmark.yaml inference \
+  --model gpt-5.4 \
+  --dimension perception_reasoning \
+  --run-id run_0_text_only \
+  --text-only
+```
+
+### 3. Evaluate Existing Results
+
+```bash
+robobench --config config/benchmark.yaml evaluate \
+  --dimension perception_reasoning
+```
+
+### 4. Run an End-to-End Pipeline
+
+```bash
+robobench --config config/benchmark.yaml pipeline --repeats 3
+```
+
+The full pipeline runs inference, evaluation, and aggregation across repeated runs configured by `runs.num_repeats`.
+
+## Configuration
+
+Most behavior is controlled from `config/benchmark.yaml`.
+
+### API Settings
+
+| Field | Description |
+| --- | --- |
+| `api.base_url` | OpenAI-compatible API endpoint |
+| `api.api_key` | API key, usually supplied as `${DUBRIFY_API_KEY}` |
+| `api.max_concurrent` | Task-level concurrency setting |
+| `api.api_max_concurrent` | Request-level API concurrency |
+| `api.task_timeout` | Per-request timeout in seconds |
+| `api.retry_attempts` | Maximum retry attempts for transient failures |
+
+### Model Selection
 
 ```yaml
 models:
   - name: "gpt-5.4"
     provider: "openai"
     vision: true
-  - name: "claude-opus-4-7"
-    provider: "anthropic"
-    vision: true
 
-dimensions:
-  perception_reasoning:
-    enabled: true
-    eval_type: "multi_choice"
-    subtasks: [static_attribute, spatial_relation]
-```
-
-### 3. Run the Benchmark
-
-```bash
-# Run stages separately
-robobench inference --config config/benchmark.yaml --model gpt-5.4
-robobench evaluate --config config/benchmark.yaml --dimension perception_reasoning
-
-# Full pipeline: inference + evaluation + 3-run aggregation
-robobench pipeline --config config/benchmark.yaml --repeats 3
-```
-
-## Configuration Reference
-
-All benchmark parameters are in `config/benchmark.yaml`:
-
-### API Settings
-
-| Field | Description | Default |
-|-------|-------------|---------|
-| `api.base_url` | API endpoint URL | — |
-| `api.api_key` | API key (supports `${ENV_VAR}`) | — |
-| `api.max_concurrent` | Task-level concurrency | 10 |
-| `api.api_max_concurrent` | Request-level concurrency per task | 10 |
-| `api.task_timeout` | Per-request timeout (seconds) | 960 |
-| `api.retry_attempts` | Max retry attempts | 10 |
-
-### Models
-
-```yaml
-models:
-  - name: "gpt-5.4"          # Model identifier (passed to API)
-    provider: "openai"       # Provider hint
-    vision: true             # Whether model supports vision input
-
-text_only_variants:          # Optional: text-only ablation
+text_only_variants:
   - name: "gpt-5.4"
     suffix: "text_only"
 ```
 
-### Run Settings
-
-| Field | Description | Default |
-|-------|-------------|---------|
-| `runs.num_repeats` | Number of repeated runs for averaging | 3 |
-| `runs.seed_strategy` | Seed strategy (`incremental`/`fixed`/`random`) | `incremental` |
-| `runs.skip_existing` | Skip if result file already exists | `true` |
-
-### Dimensions
-
-Each dimension defines:
+### Dimension Selection
 
 ```yaml
 dimensions:
-  generalized_planning:
-    enabled: true                        # Whether to run this dimension
-    eval_type: "planning"                # Evaluator: multi_choice / planning / point / iou / trajectory
-    system_prompt_key: "skill_list"      # System prompt template key
-    subtasks:                            # List of subtask names
-      - single_arm
-      - dual_arm
-      - mobile_manipulation
+  perception_reasoning:
+    enabled: true
+    eval_type: "multi_choice"
+    system_prompt_key: "perception"
+    subtasks:
+      - static_attribute
+      - spatial_relation
 ```
 
 ### Paths
 
 | Field | Description |
-|-------|-------------|
-| `paths.data_root` | Root directory for benchmark data (images, questions) |
-| `paths.results_root` | Directory for storing model outputs and scores |
-| `paths.cache_dir` | Directory for temporary/checkpoint files |
+| --- | --- |
+| `paths.data_root` | Local RoboBench dataset directory |
+| `paths.middle_file_dir` | Directory containing question JSONL files |
+| `paths.results_root` | Model outputs and evaluated scores |
+| `paths.cache_dir` | Checkpoints and temporary files |
+| `paths.old_prefix` / `paths.new_prefix` | Image-path prefix rewrite for released dataset paths |
 
-## Architecture
+## Project Structure
 
-RoboBench is organized as a **dataflow pipeline** where each stage is a composable node:
-
-```
-LoadDatasetNode -> BuildPromptsNode -> RunInferenceNode -> EvaluateNode -> AggregateScoresNode -> GenerateReportNode
-```
-
-### Package Structure
-
-```
-robobench/
-├── pipeline/          # Pipeline engine (nodes, executor, run context)
-├── inference/         # Async API client with retry, checkpointing, resume
-│   ├── client.py      # AsyncModelClient: configurable concurrency & timeout
-│   ├── checkpoint.py  # CheckpointManager: resume from crashes
-│   └── image.py       # Image encoding (base64, resize) for vision input
-├── prompts/           # Prompt construction library (open-source ready)
-│   ├── builder.py     # PromptBuilder: format messages with images
-│   └── templates/     # Prompt templates per task type
-├── evaluation/        # Evaluators per task type
-│   ├── multi_choice.py   # Multiple choice / yes-no / open-ended
-│   ├── planning.py       # Q1 (multi-step DAG) / Q2 (single-step) / Q3 (yes/no)
-│   ├── point.py          # Coordinate evaluation
-│   ├── iou.py            # Bounding box IoU
-│   └── trajectory.py     # Trajectory evaluation
-├── scoring/           # Result aggregation & statistics
-│   └── aggregator.py  # 3-run averaging (mean, std, min, max)
-├── data/              # Dataset loading
-│   └── dataset.py     # RoboBenchDataset: load questions from JSONL
-└── config.py          # YAML configuration with Pydantic validation
+```text
+RoboBench/
+├── config/
+│   └── benchmark.example.yaml
+├── src/robobench/
+│   ├── analysis/          # Dataset and correlation analysis utilities
+│   ├── data/              # Dataset loading from question JSONL files
+│   ├── evaluation/        # Multi-choice, planning, point, IoU, trajectory evaluators
+│   ├── generation/        # Generation-stage nodes
+│   ├── inference/         # Async API client, checkpoints, image handling, local HF client
+│   ├── pipeline/          # Dataflow nodes and executor
+│   ├── prompts/           # Prompt builders and robot-task templates
+│   ├── scoring/           # Multi-run aggregation and statistics
+│   └── utils/             # Path utilities
+├── pyproject.toml
+└── README.md
 ```
 
 ## Evaluation Metrics
 
-### Multi-Choice / Yes-No
+| Evaluator | What it checks |
+| --- | --- |
+| `multi_choice` | Multiple-choice, yes/no, and open-ended response normalization/scoring |
+| `planning` | Q1 multi-step plans, Q2 single-step actions, Q3 state estimation |
+| `point` | Distance between predicted and ground-truth coordinates |
+| `iou` | Bounding-box intersection over union |
+| `trajectory` | Multi-point trajectory comparison |
 
-- **Multiple choice**: Regex extraction of A-D letters, sorted comparison with ground truth. Ambiguous responses normalized with GPT.
-- **Yes/No**: Direct string matching (supports yes/no/equal/left/right/unclear/transparent/etc.)
-- **Open-ended**: GPT evaluation (0-1 score) with word overlap fallback
+Planning evaluation can call an evaluator model, configured by `evaluation.planning.eval_model`, to judge action feasibility and task completion.
 
-### Planning (Q1/Q2/Q3)
-
-- **Q1 - Multi-step Planning**: Extract structured plan, build DAG, evaluate node correctness + task completion degree
-- **Q2 - Single-step Planning**: Extract step, evaluate skill usage + object reasonableness + parameter accuracy
-- **Q3 - State Estimation**: Binary yes/no matching
-
-### Point / Trajectory
-
-- **Point**: Euclidean distance between predicted and ground-truth coordinates
-- **IoU**: Intersection over Union for bounding boxes
-- **Trajectory**: Multi-point trajectory comparison
-
-## CLI Usage
-
-```bash
-# Inference only
-robobench inference --config config/benchmark.yaml --model gpt-5.4
-
-# Evaluation only (on existing results)
-robobench evaluate --config config/benchmark.yaml --dimension perception_reasoning
-
-# Full pipeline with 3 repeats
-robobench pipeline --config config/benchmark.yaml --repeats 3
-
-# Dry run: show pipeline graph without executing
-robobench pipeline --config config/benchmark.yaml --dry-run
-```
-
-## Prompt Library
-
-The `robobench.prompts` module is designed as a reusable, open-source prompt construction library for robotic video analysis:
+## Prompt Builder Example
 
 ```python
-from robobench.prompts import PromptBuilder
+from robobench.prompts.builder import PromptBuilder
 
 builder = PromptBuilder(
-    data_root="/path/to/data",
-    system_prompt_key="skill_list"
+    data_root="data/RoboBench-hf",
+    system_prompt_key="skill_list",
+    old_prefix="/share/project/test/robobench/robobench",
+    new_prefix="data/RoboBench-hf",
 )
 
-# Build prompts from raw questions
-prompts = builder.build(questions, mode="base64")
+questions = [
+    {
+        "request_id": "example-0",
+        "question": "What action should the robot take next?",
+        "image_urls": ["data/RoboBench-hf/example.jpg"],
+    }
+]
 
-# Each prompt is API-ready
-for prompt in prompts:
-    print(prompt["messages"])  # OpenAI-compatible message format
+prompts = builder.build(questions, mode="base64")
+builder.save(prompts, "prompts.jsonl")
 ```
 
 ## Development
 
 ```bash
-# Install in development mode
 pip install -e ".[dev]"
-
-# Format code
+python -m compileall -q src
 black src/
-
-# Run tests
-pytest tests/
+ruff check src/
 ```
 
 ## Citation
@@ -286,6 +265,10 @@ If you use RoboBench in your research, please cite:
 }
 ```
 
+## Acknowledgements
+
+RoboBench builds on open-source tooling across the Python, Hugging Face, OpenAI-compatible API, and robotics research ecosystems. We thank the contributors and maintainers of these projects.
+
 ## License
 
-MIT License — see [LICENSE](LICENSE).
+This repository is released under the [MIT License](LICENSE).
