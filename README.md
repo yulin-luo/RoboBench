@@ -29,7 +29,7 @@
 RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied intelligence into diagnostic abilities rather than reporting only end-to-end task success. It covers the full execution pipeline from instruction comprehension and perception to generalized planning, affordance reasoning, and failure analysis.
 
 <p align="center">
-  <img src="https://robo-bench.github.io/static/images/teaser/teaser.png" alt="RoboBench overview" width="900">
+  <img src="assets/teaser.jpg" alt="RoboBench overview" width="900">
 </p>
 
 ### ✨ What RoboBench Provides
@@ -263,17 +263,13 @@ ruff check src/
 If you use RoboBench in your research, please cite:
 
 ```bibtex
-@inproceedings{robobench2026,
+@article{luo2025robobench,
   title={RoboBench: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models as Embodied Brain},
   author={Luo, Yulin and Fan, Chun-Kai and Dong, Menghang and Shi, Jiayu and Mi, Xiangju and Zhao, Mengdi and Zhang, Bo-Wen and Chi, Cheng and Liu, Jiaming and Dai, Gaole and Zhang, Rongyu and An, Ruichuan and Wu, Kun and Che, Zhengping and Xie, Shaoxuan and Yao, Guocai and Zhao, Zhongxia and Wang, Pengwei and Liu, Guang and Wang, Zhongyuan and Huang, Tiejun and Zhang, Shanghang},
-  booktitle={European Conference on Computer Vision (ECCV)},
-  year={2026}
+  journal={arXiv preprint arXiv:2510.17801},
+  year={2025}
 }
 ```
-
-## 🙏 Acknowledgements
-
-RoboBench builds on open-source tooling across the Python, Hugging Face, OpenAI-compatible API, and robotics research ecosystems. We thank the contributors and maintainers of these projects.
 
 ## 📜 License
 
