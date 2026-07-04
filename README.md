@@ -8,6 +8,7 @@
   <a href="https://arxiv.org/abs/2510.17801"><img src="https://img.shields.io/badge/arXiv-2510.17801-b31b1b.svg?style=flat&logo=arxiv&logoColor=white" alt="arXiv"></a>
   <a href="https://robo-bench.github.io/"><img src="https://img.shields.io/badge/Project-Website-brightgreen.svg?style=flat&logo=githubpages&logoColor=white" alt="Project website"></a>
   <a href="https://huggingface.co/datasets/LeoFan01/RoboBench"><img src="https://img.shields.io/badge/Dataset-HuggingFace-yellow.svg?style=flat&logo=huggingface&logoColor=black" alt="Dataset"></a>
+  <a href="https://huggingface.co/datasets/lyl010221-pku/RoboBench-Results"><img src="https://img.shields.io/badge/Results-HuggingFace-orange.svg?style=flat&logo=huggingface&logoColor=black" alt="Official results"></a>
   <a href="https://github.com/yulin-luo/RoboBench/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?style=flat&logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/ECCV-2026-purple.svg?style=flat" alt="ECCV 2026">
@@ -20,6 +21,7 @@
 - 📄 **Paper**: [RoboBench: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models as Embodied Brain](https://arxiv.org/abs/2510.17801)
 - 🌐 **Project website**: [robo-bench.github.io](https://robo-bench.github.io/)
 - 🤗 **Dataset**: [LeoFan01/RoboBench](https://huggingface.co/datasets/LeoFan01/RoboBench)
+- 📊 **Official results**: [lyl010221-pku/RoboBench-Results](https://huggingface.co/datasets/lyl010221-pku/RoboBench-Results)
 - 💻 **Code**: [github.com/yulin-luo/RoboBench](https://github.com/yulin-luo/RoboBench)
 
 > Accepted to **ECCV 2026**.
@@ -81,6 +83,10 @@ huggingface-cli download \
 ```
 
 The pipeline uses prompt-ready question JSONL files from `paths.middle_file_dir` and uses `paths.data_root` to resolve images and released `questions.json` metadata. If your dataset package stores these JSONL files outside `data/RoboBench-hf`, keep that directory as a sibling `data/middle_file`.
+
+Official score tables and model-output JSON files are hosted separately to keep this repository lightweight:
+
+- [lyl010221-pku/RoboBench-Results](https://huggingface.co/datasets/lyl010221-pku/RoboBench-Results)
 
 ## 🚀 Quick Start
 
