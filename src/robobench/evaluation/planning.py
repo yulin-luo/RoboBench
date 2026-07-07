@@ -1,8 +1,8 @@
 """Planning evaluator for RoboBench Q1/Q2/Q3.
 
-Production evaluator — aligned with E1 (v3.1 prompt) and paper v6.
+Production evaluator — aligned with the final v3 prompt and paper.
 
-Q1 (Multi-step Planning): MLLM-as-world-simulator with image + DAG + v3.1 prompt
+Q1 (Multi-step Planning): MLLM-as-world-simulator with image + DAG + final v3 prompt
 Q2 (Single-step Planning): Extract step → compare with GT on 3 dimensions
 Q3 (State Estimation): Extract yes/no → binary match
 
@@ -21,10 +21,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from .base import BaseEvaluator, register_evaluator
 
 # ---------------------------------------------------------------------------
-# v3.1 Prompt (production) — copied from e1_eval_200.py
+# v3 Prompt (production)
 # ---------------------------------------------------------------------------
 
-PROMPT_V3_1 = """You are a world-simulator judge for robot task plans. Given a scene image, a ground-truth (GT) action sequence, a GT DAG of dependencies, and a model's predicted plan, output two integer scores in [0, 10].
+PROMPT_V3 = """You are a world-simulator judge for robot task plans. Given a scene image, a ground-truth (GT) action sequence, a GT DAG of dependencies, and a model's predicted plan, output two integer scores in [0, 10].
 
 ## Inputs
 - **Scene image** `I_0`: first frame of the task — use it to identify the objects, their initial spatial relations, and physical constraints.
@@ -106,6 +106,8 @@ Both scores must be integers in [0, 10]. The `reason` must show the explicit cou
 
 
 # ---------------------------------------------------------------------------
+PROMPT_V3_1 = PROMPT_V3  # Backward-compatible alias.
+
 # Prompt templates for Q2 / Q3 (kept from original)
 # ---------------------------------------------------------------------------
 
@@ -191,7 +193,7 @@ Response: {response}
 class PlanningEvaluator(BaseEvaluator):
     """Production evaluator for planning tasks (Q1/Q2/Q3).
 
-    Q1 uses the E1-validated v3.1 prompt with image + DAG inputs.
+    Q1 uses the final v3 prompt with image + DAG inputs.
     Q2/Q3 use LLM-based extraction and comparison.
     """
 
@@ -435,11 +437,11 @@ class PlanningEvaluator(BaseEvaluator):
         return ""
 
     # ------------------------------------------------------------------
-    # Q1 Evaluation (E1-aligned v3.1)
+    # Q1 Evaluation (final v3)
     # ------------------------------------------------------------------
 
     async def _evaluate_q1(self, records: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Evaluate Q1 (multi-step planning) using E1 v3.1 prompt + image + DAG."""
+        """Evaluate Q1 (multi-step planning) using final v3 prompt + image + DAG."""
         if not records:
             return {"count": 0, "mean_score": 0, "scores": []}
 
@@ -536,7 +538,7 @@ class PlanningEvaluator(BaseEvaluator):
         }
 
     def _build_q1_messages(self, task: Dict[str, Any]) -> Optional[List[Dict]]:
-        """Build evaluation messages for Q1 (E1 v3.1 style)."""
+        """Build evaluation messages for Q1 (final v3 style)."""
         image_path = task.get("image_path")
         if not image_path:
             print(f"[WARN] No image for {task['id']}, evaluating without image")
@@ -586,7 +588,7 @@ Evaluate the model plan. Output JSON only."""
             return [{
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": PROMPT_V3_1 + "\n\n" + eval_text},
+                    {"type": "text", "text": PROMPT_V3 + "\n\n" + eval_text},
                     img_content,
                 ],
             }]
@@ -594,12 +596,12 @@ Evaluate the model plan. Output JSON only."""
             # OpenAI / Gemini: system prompt + user content [image, text]
             if img_b64:
                 return [
-                    {"role": "system", "content": PROMPT_V3_1},
+                    {"role": "system", "content": PROMPT_V3},
                     {"role": "user", "content": [img_content, text_content]},
                 ]
             else:
                 return [
-                    {"role": "system", "content": PROMPT_V3_1},
+                    {"role": "system", "content": PROMPT_V3},
                     {"role": "user", "content": eval_text},
                 ]
 

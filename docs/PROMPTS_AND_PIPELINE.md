@@ -39,7 +39,7 @@ The supplementary material contains the full prompt appendix for benchmark const
 | `prompt:scene_labels` scene-label extraction | Described in the paper appendix; not exposed as a standalone runtime module |
 | `prompt:functional_qa_generation` functionality QA generation | Described in the paper appendix; not exposed as a standalone runtime module |
 | `prompt:q1_action_extraction` Q1 structured action extraction | Released in `prompts/templates/planning.py`; production scoring path uses `evaluation/planning.py` |
-| `prompt:q1_scoring` Q1 DAG-grounded world-simulator scoring | Released as production `PROMPT_V3_1` in `evaluation/planning.py` |
+| `prompt:q1_scoring` Q1 DAG-grounded world-simulator scoring | Released as production `PROMPT_V3` in `evaluation/planning.py` |
 | `prompt:q2_action_extraction` Q2 action extraction | Released as `PROMPT_TEMPLATE_EXTRACT_STEP` in `evaluation/planning.py` |
 | `prompt:q2_scoring` Q2 prompt-based scoring | Released as `PROMPT_TEMPLATE_COMPARE_STEPS` in `evaluation/planning.py` |
 | `prompt:q3_yesno` Q3 yes/no conversion | Released as `PROMPT_TEMPLATE_EXTRACT_YES_NO` in `evaluation/planning.py` |
@@ -67,6 +67,6 @@ The public evaluation path is implemented in `src/robobench/evaluation/`:
 - Planning Q1/Q2/Q3 are handled by `planning.py`.
 - Point, bounding-box, and trajectory tasks are handled by `point.py`, `iou.py`, and `trajectory.py`.
 
-For planning, Q1 uses `PlanningEvaluator` with `PROMPT_V3_1`, the production MLLM-as-world-simulator judge prompt that scores node correctness and embodied task completion. Q2 extracts and compares the next action step. Q3 normalizes model outputs into yes/no decisions.
+For planning, Q1 uses `PlanningEvaluator` with the production `PROMPT_V3` MLLM-as-world-simulator judge prompt that scores node correctness and embodied task completion. Q2 extracts and compares the next action step. Q3 normalizes model outputs into yes/no decisions.
 
 `src/robobench/prompts/templates/planning.py` contains shared planning templates and earlier extraction/evaluation helpers. For reproducing official planning scores, use the evaluator path in `src/robobench/evaluation/planning.py`.
