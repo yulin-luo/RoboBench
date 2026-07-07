@@ -101,17 +101,28 @@ export ROBOBENCH_DATA_ROOT="$PWD/data/RoboBench-hf"
 export ROBOBENCH_MIDDLE_FILE_DIR="$PWD/data/middle_file"
 export ROBOBENCH_RESULTS_ROOT="$PWD/results"
 export ROBOBENCH_CACHE_DIR="$PWD/cache"
-export ROBOBENCH_OLD_IMAGE_PREFIX="/share/project/test/robobench/robobench/RoboBench-hf"
+export ROBOBENCH_OLD_IMAGE_PREFIX=""
 ```
 
 Edit `config/benchmark.yaml` to choose models, dimensions, and concurrency settings. Keep `config/benchmark.yaml` local; it is intentionally ignored by git.
 
 ### 2. 🧠 Run Inference
 
-The CLI uses a top-level `--config` argument before the subcommand.
+After `pip install -e .`, the package exposes a `robobench` command-line entrypoint. The CLI uses a top-level `--config` argument before the subcommand.
 
 ```bash
 robobench --config config/benchmark.yaml inference \
+  --model gpt-5.4 \
+  --dimension perception_reasoning \
+  --subtask static_attribute \
+  --max-samples 1 \
+  --run-id smoke_test
+```
+
+If you prefer not to install the package, use the equivalent Python module form:
+
+```bash
+PYTHONPATH=src python -m robobench.cli --config config/benchmark.yaml inference \
   --model gpt-5.4 \
   --dimension perception_reasoning \
   --subtask static_attribute \
