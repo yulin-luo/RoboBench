@@ -105,9 +105,6 @@ Counting rules during rollout:
 Both scores must be integers in [0, 10]. The `reason` must show the explicit counts. Output JSON only, no surrounding prose."""
 
 
-# ---------------------------------------------------------------------------
-PROMPT_V3_1 = PROMPT_V3  # Backward-compatible alias.
-
 # Prompt templates for Q2 / Q3 (kept from original)
 # ---------------------------------------------------------------------------
 
