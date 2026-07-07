@@ -22,6 +22,7 @@
 - 🌐 **Project website**: [robo-bench.github.io](https://robo-bench.github.io/)
 - 🤗 **Dataset**: [LeoFan01/RoboBench](https://huggingface.co/datasets/LeoFan01/RoboBench)
 - 📊 **Official results**: [lyl010221-pku/RoboBench-Results](https://huggingface.co/datasets/lyl010221-pku/RoboBench-Results)
+- 💬 **Prompts and pipeline**: [docs/PROMPTS_AND_PIPELINE.md](docs/PROMPTS_AND_PIPELINE.md)
 - 💻 **Code**: [github.com/yulin-luo/RoboBench](https://github.com/yulin-luo/RoboBench)
 
 > Accepted to **ECCV 2026**.
@@ -41,7 +42,7 @@ RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied 
 - **Cross-domain planning tests**: Robot morphology, object type, viewpoint, attributes, and world-knowledge generalization.
 - **MLLM-as-world-simulator evaluation**: Planning outputs are judged with a simulator-style MLLM evaluator for physically grounded task completion.
 - **Reproducible package**: YAML-driven configuration, API inference, task-specific evaluators, checkpoint/resume, and multi-run aggregation.
-- **Reusable prompt pipeline**: Open prompt construction utilities for robotic video and image-based question answering.
+- **Reusable prompt pipeline**: Open prompt construction utilities for robotic video and image-based question answering, with prompt coverage documented in [docs/PROMPTS_AND_PIPELINE.md](docs/PROMPTS_AND_PIPELINE.md).
 
 ## 🧭 Benchmark Dimensions
 
