@@ -604,7 +604,7 @@ Evaluate the model plan. Output JSON only."""
 
     @staticmethod
     def _parse_q1_score(response: str) -> Optional[Dict[str, int]]:
-        """Parse Q1 evaluation score from LLM response (E1-aligned)."""
+        """Parse Q1 evaluation score from LLM response."""
         if not response:
             return None
 

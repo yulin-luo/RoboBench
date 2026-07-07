@@ -29,7 +29,7 @@
 
 ## 🔍 Overview
 
-RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied intelligence into diagnostic abilities rather than reporting only end-to-end task success. It covers the full execution pipeline from instruction comprehension and perception to generalized planning, affordance reasoning, and failure analysis. The camera-ready release contains **5 dimensions, 14 capability groups, 25 tasks, 6,092 QA pairs, and results for 18 state-of-the-art MLLMs**.
+RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied intelligence into diagnostic abilities rather than reporting only end-to-end task success. It covers the full execution pipeline from instruction comprehension and perception to generalized planning, affordance reasoning, and failure analysis. The ECCV 2026 release contains **5 dimensions, 14 capability groups, 25 tasks, 6,092 QA pairs, and results for 18 state-of-the-art MLLMs**.
 
 <p align="center">
   <img src="assets/teaser.jpg" alt="RoboBench overview" width="900">
@@ -90,7 +90,7 @@ Official score tables and model-output JSON files are hosted separately to keep 
 
 - [lyl010221-pku/RoboBench-Results](https://huggingface.co/datasets/lyl010221-pku/RoboBench-Results)
 
-The official camera-ready leaderboard reports 18 evaluated MLLMs:
+The official leaderboard reports 18 evaluated MLLMs:
 
 ```text
 GPT-5.4, GPT-5.2, GPT-5, GPT-4.1, GPT-4o,
