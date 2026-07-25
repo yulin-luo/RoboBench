@@ -14,8 +14,8 @@ Common environment variables:
   ROBOBENCH_CONFIG                Config path (default: config/benchmark.yaml)
   ROBOBENCH_RUN_ID                Run id (default: hy_embodied_run0)
   ROBOBENCH_MAX_SAMPLES           Optional sample cap for debugging
-  ROBOBENCH_HY_MCQ_DIMENSIONS     Default: "perception_reasoning error_analysis"
-  ROBOBENCH_HY_PLANNING_DIMENSIONS Default: "generalized_planning"
+  ROBOBENCH_HY_MCQ_DIMENSIONS     Default: "perception_reasoning affordance_reasoning error_analysis"
+  ROBOBENCH_HY_PLANNING_DIMENSIONS Default: "instruction_comprehension generalized_planning"
 
 Before running:
   1. pip install -e .
@@ -43,8 +43,8 @@ CONFIG="${ROBOBENCH_CONFIG:-config/benchmark.yaml}"
 MODEL="${ROBOBENCH_MODEL:-}"
 RUN_ID="${ROBOBENCH_RUN_ID:-hy_embodied_run0}"
 MAX_SAMPLES="${ROBOBENCH_MAX_SAMPLES:-}"
-MCQ_DIMENSIONS="${ROBOBENCH_HY_MCQ_DIMENSIONS:-perception_reasoning error_analysis}"
-PLANNING_DIMENSIONS="${ROBOBENCH_HY_PLANNING_DIMENSIONS:-generalized_planning}"
+MCQ_DIMENSIONS="${ROBOBENCH_HY_MCQ_DIMENSIONS:-perception_reasoning affordance_reasoning error_analysis}"
+PLANNING_DIMENSIONS="${ROBOBENCH_HY_PLANNING_DIMENSIONS:-instruction_comprehension generalized_planning}"
 
 case "$MODE" in
   all|mcq|planning|smoke|dry-run) ;;

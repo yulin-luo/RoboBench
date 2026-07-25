@@ -17,8 +17,8 @@ https://github.com/Tencent-Hunyuan/HY-Embodied/issues/14#issuecomment-5070118229
 
 | Setting | Default RoboBench dimensions | Notes |
 | --- | --- | --- |
-| `RoboBench-MCQ` | `perception_reasoning error_analysis` | Multiple-choice style dimensions in the public config. Override with `ROBOBENCH_HY_MCQ_DIMENSIONS` if you need a different protocol. |
-| `RoboBench-Planning` | `generalized_planning` | Uses the public planning evaluator. Override with `ROBOBENCH_HY_PLANNING_DIMENSIONS` if the target protocol includes additional planning dimensions. |
+| `RoboBench-MCQ` | `perception_reasoning affordance_reasoning error_analysis` | Dimensions 2, 4, and 5 use the multiple-choice evaluator. Override with `ROBOBENCH_HY_MCQ_DIMENSIONS` if you need a different protocol. |
+| `RoboBench-Planning` | `instruction_comprehension generalized_planning` | Dimensions 1 and 3 use the planning evaluator. Override with `ROBOBENCH_HY_PLANNING_DIMENSIONS` if the target protocol includes additional planning dimensions. |
 
 Planning evaluation can call an evaluator model configured by
 `evaluation.planning.eval_model` in `config/benchmark.yaml`.
@@ -111,8 +111,8 @@ Use environment variables to match a different reported protocol:
 
 ```bash
 ROBOBENCH_MODEL=HY-Embodied-0.5-MoT-2B \
-ROBOBENCH_HY_MCQ_DIMENSIONS="perception_reasoning error_analysis" \
-ROBOBENCH_HY_PLANNING_DIMENSIONS="generalized_planning" \
+ROBOBENCH_HY_MCQ_DIMENSIONS="perception_reasoning affordance_reasoning error_analysis" \
+ROBOBENCH_HY_PLANNING_DIMENSIONS="instruction_comprehension generalized_planning" \
 ROBOBENCH_RUN_ID=hy_embodied_run0 \
   bash scripts/run_hy_embodied_eval.sh all
 ```

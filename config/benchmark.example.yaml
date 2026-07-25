@@ -124,8 +124,8 @@ dimensions:
 
   affordance_reasoning:
     enabled: true
-    eval_type: "point"
-    system_prompt_key: "affordance_point"
+    eval_type: "multi_choice"
+    system_prompt_key: "affordance"
     subtasks:
       - static_affordance
       - dynamic_affordance

@@ -57,7 +57,7 @@ RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied 
 | **Instruction Comprehension** | Explicit goals, implicit demands, cross-task navigation | Planning |
 | **Perception and Reasoning** | Object attributes, spatial relations, temporal causality, robot type/view | Multi-choice |
 | **Generalized Planning** | Cross-embodiment, cross-object, cross-view, cross-attribute, world knowledge | Planning Q1/Q2/Q3 |
-| **Affordance Reasoning** | Static affordance, dynamic affordance, navigation visual prompts | Point / coordinate |
+| **Affordance Reasoning** | Static affordance, dynamic affordance, navigation visual prompts | Multi-choice |
 | **Error Analysis** | High-level planning errors, low-level execution errors | Multi-choice |
 
 ## ⚙️ Installation
