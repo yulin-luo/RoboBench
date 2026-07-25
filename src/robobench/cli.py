@@ -33,6 +33,34 @@ def _load_config(args) -> BenchmarkConfig:
     return BenchmarkConfig.from_yaml(config_path)
 
 
+def _raw_path_matches_dimension(raw_path: Path, dimension: str) -> bool:
+    task_label = raw_path.parent.name
+    return task_label == dimension or task_label.startswith(f"{dimension}_")
+
+
+def _safe_label(value: str) -> str:
+    return value.replace("/", "_").replace("-", "_")
+
+
+def _raw_path_matches_model(raw_path: Path, models: list[str]) -> bool:
+    if not models:
+        return True
+    if len(raw_path.parents) < 2:
+        return False
+    model_label = raw_path.parent.parent.name
+    return model_label in {_safe_label(model) for model in models}
+
+
+def _raw_path_matches_run(raw_path: Path, results_dir: Path, run_id: str | None) -> bool:
+    if not run_id:
+        return True
+    try:
+        relative = raw_path.relative_to(results_dir)
+    except ValueError:
+        return False
+    return bool(relative.parts) and relative.parts[0] == run_id
+
+
 def cmd_inference(args):
     """Run inference for specified models and dimensions."""
     config = _load_config(args)
@@ -95,9 +123,15 @@ def cmd_evaluate(args):
 
         # Find result files for this dimension.
         results_dir = Path(config.paths.results_root)
-        raw_paths = sorted(results_dir.rglob("raw.json"))
+        raw_paths = [
+            path
+            for path in sorted(results_dir.rglob("raw.json"))
+            if _raw_path_matches_dimension(path, dim_name)
+            and _raw_path_matches_model(path, args.model or [])
+            and _raw_path_matches_run(path, results_dir, args.run_id)
+        ]
         if not raw_paths:
-            print(f"  No raw.json files found under {results_dir}")
+            print(f"  No raw.json files found for {dim_name} under {results_dir}")
 
         for raw_path in raw_paths:
             print(f"  Evaluating file: {raw_path}")
@@ -248,6 +282,8 @@ def main():
     p_evaluate.add_argument(
         "--dimension", nargs="+", help="Specific dimensions to evaluate"
     )
+    p_evaluate.add_argument("--model", nargs="+", help="Specific models to evaluate")
+    p_evaluate.add_argument("--run-id", help="Specific run identifier to evaluate")
 
     # pipeline command
     p_pipeline = subparsers.add_parser("pipeline", help="Run full benchmark pipeline")

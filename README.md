@@ -160,6 +160,10 @@ robobench --config config/benchmark.yaml inference \
   --text-only
 ```
 
+HY-Embodied users who want to run the reported `RoboBench-MCQ` and
+`RoboBench-Planning` style settings can use the helper script in
+[docs/HY_EMBODIED_EVAL.md](docs/HY_EMBODIED_EVAL.md).
+
 ### 3. 📊 Evaluate Existing Results
 
 ```bash
