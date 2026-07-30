@@ -61,6 +61,8 @@ class AsyncModelClient:
         self.max_concurrent = api_config.api_max_concurrent
         self.retry_attempts = api_config.retry_attempts
         self.task_timeout = api_config.task_timeout
+        self.extra_body = getattr(api_config, "extra_body", {}) or {}
+        self.max_tokens = getattr(api_config, "max_tokens", None)
         backoff = api_config.retry_backoff
         self.backoff_multiplier = backoff.get("multiplier", 1)
         self.backoff_min = backoff.get("min", 1)
@@ -81,8 +83,12 @@ class AsyncModelClient:
         # image_url -> image for Anthropic models, and Anthropic requires max_tokens.
         adapted_messages = self._adapt_messages_for_model(messages, model)
         kwargs = {"model": model, "messages": adapted_messages, "timeout": self.task_timeout}
+        if self.extra_body:
+            kwargs["extra_body"] = self.extra_body
+        if self.max_tokens is not None:
+            kwargs["max_tokens"] = self.max_tokens
         if self._is_anthropic(model):
-            kwargs["max_tokens"] = 4096
+            kwargs.setdefault("max_tokens", 4096)
         try:
             async with semaphore:
                 async with AsyncOpenAI(

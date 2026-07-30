@@ -162,7 +162,9 @@ robobench --config config/benchmark.yaml inference \
 
 HY-Embodied users who want to run the reported `RoboBench-MCQ` and
 `RoboBench-Planning` style settings can use the helper script in
-[docs/HY_EMBODIED_EVAL.md](docs/HY_EMBODIED_EVAL.md).
+[docs/HY_EMBODIED_EVAL.md](docs/HY_EMBODIED_EVAL.md). The helper expects a
+HY-Embodied model served through an OpenAI-compatible endpoint, such as the
+official `Hy-Embodied-VLM-1.0` vLLM server; it does not load HY weights directly.
 
 ### 3. 📊 Evaluate Existing Results
 

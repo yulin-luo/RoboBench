@@ -5,6 +5,8 @@
 api:
   base_url: "${ROBOBENCH_API_BASE_URL}"
   api_key: "${DUBRIFY_API_KEY}"
+  extra_body: {}
+  max_tokens:
   max_concurrent: 4
   api_max_concurrent: 4
   task_timeout: 960

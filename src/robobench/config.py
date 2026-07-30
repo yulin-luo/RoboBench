@@ -35,6 +35,8 @@ class APIConfig(BaseModel):
 
     base_url: str = "https://dubrify.com/v1"
     api_key: str = ""
+    extra_body: Dict[str, Any] = Field(default_factory=dict)
+    max_tokens: Optional[int] = None
     max_concurrent: int = 10
     api_max_concurrent: int = 10
     task_timeout: int = 960

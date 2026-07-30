@@ -6,6 +6,10 @@ usage() {
 Run RoboBench-MCQ and RoboBench-Planning style subsets for an OpenAI-compatible
 HY-Embodied endpoint/model.
 
+This script does not load HY-Embodied weights directly. Start an
+OpenAI-compatible server first, for example the official Hy-Embodied-VLM-1.0
+vLLM server, and set ROBOBENCH_MODEL to the served model name.
+
 Usage:
   ROBOBENCH_MODEL=<served-model-name> bash scripts/run_hy_embodied_eval.sh [all|mcq|planning|smoke|dry-run]
 
@@ -22,14 +26,15 @@ Before running:
   2. Download the RoboBench dataset.
   3. Copy config/benchmark.example.yaml to config/benchmark.yaml.
   4. Add your served HY-Embodied model name to config.models.
-  5. Export ROBOBENCH_API_BASE_URL, DUBRIFY_API_KEY, ROBOBENCH_DATA_ROOT,
+  5. Start the HY model as an OpenAI-compatible endpoint.
+  6. Export ROBOBENCH_API_BASE_URL, DUBRIFY_API_KEY, ROBOBENCH_DATA_ROOT,
      ROBOBENCH_MIDDLE_FILE_DIR, ROBOBENCH_RESULTS_ROOT, and ROBOBENCH_CACHE_DIR.
 
 Examples:
-  ROBOBENCH_MODEL=HY-Embodied-0.5-MoT-2B bash scripts/run_hy_embodied_eval.sh dry-run
-  ROBOBENCH_MODEL=HY-Embodied-0.5-MoT-2B bash scripts/run_hy_embodied_eval.sh smoke
-  ROBOBENCH_MODEL=HY-Embodied-0.5-MoT-2B bash scripts/run_hy_embodied_eval.sh mcq
-  ROBOBENCH_MODEL=HY-Embodied-0.5-MoT-2B bash scripts/run_hy_embodied_eval.sh planning
+  ROBOBENCH_MODEL=hy_a3b bash scripts/run_hy_embodied_eval.sh dry-run
+  ROBOBENCH_MODEL=hy_a3b bash scripts/run_hy_embodied_eval.sh smoke
+  ROBOBENCH_MODEL=hy_a3b bash scripts/run_hy_embodied_eval.sh mcq
+  ROBOBENCH_MODEL=hy_a3b bash scripts/run_hy_embodied_eval.sh planning
 USAGE
 }
 
