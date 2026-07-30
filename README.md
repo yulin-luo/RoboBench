@@ -23,7 +23,7 @@
 - 🤗 **Dataset**: [LeoFan01/RoboBench](https://huggingface.co/datasets/LeoFan01/RoboBench)
 - 📊 **Official results**: [lyl010221-pku/RoboBench-Results](https://huggingface.co/datasets/lyl010221-pku/RoboBench-Results)
 - 💬 **Prompts and pipeline**: [docs/PROMPTS_AND_PIPELINE.md](docs/PROMPTS_AND_PIPELINE.md)
-- 🧪 **MCQ and Planning evaluation**: [docs/HY_EMBODIED_EVAL.md](docs/HY_EMBODIED_EVAL.md)
+- 🧪 **Multiple-Choice Question (MCQ) and Planning evaluation**: [docs/HY_EMBODIED_EVAL.md](docs/HY_EMBODIED_EVAL.md)
 - 💻 **Code**: [github.com/yulin-luo/RoboBench](https://github.com/yulin-luo/RoboBench)
 
 > Accepted to **ECCV 2026**.
@@ -56,16 +56,17 @@ RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied 
 | Dimension | Representative capabilities | Evaluation type |
 | --- | --- | --- |
 | **Instruction Comprehension** | Explicit goals, implicit demands, cross-task navigation | Planning |
-| **Perception and Reasoning** | Object attributes, spatial relations, temporal causality, robot type/view | Multi-choice |
+| **Perception and Reasoning** | Object attributes, spatial relations, temporal causality, robot type/view | Multiple-choice |
 | **Generalized Planning** | Cross-embodiment, cross-object, cross-view, cross-attribute, world knowledge | Planning Q1/Q2/Q3 |
-| **Affordance Reasoning** | Static affordance, dynamic affordance, navigation visual prompts | Multi-choice |
-| **Error Analysis** | High-level planning errors, low-level execution errors | Multi-choice |
+| **Affordance Reasoning** | Static affordance, dynamic affordance, navigation visual prompts | Multiple-choice |
+| **Error Analysis** | High-level planning errors, low-level execution errors | Multiple-choice |
 
-## 🧪 RoboBench-MCQ and RoboBench-Planning
+## 🧪 Multiple-Choice Question (MCQ) and Planning
 
 For comparison with embodied foundation models such as
 [HY-Embodied](https://github.com/Tencent-Hunyuan/HY-Embodied), RoboBench provides
-two ready-to-run evaluation settings:
+two ready-to-run evaluation settings. Here, **MCQ** means
+**Multiple-Choice Question**:
 
 | Setting | Included dimensions | Evaluation |
 | --- | --- | --- |
@@ -280,7 +281,7 @@ RoboBench/
 ├── src/robobench/
 │   ├── analysis/          # Dataset and correlation analysis utilities
 │   ├── data/              # Dataset loading from question JSONL files
-│   ├── evaluation/        # Multi-choice, planning, point, IoU, trajectory evaluators
+│   ├── evaluation/        # Multiple-choice, planning, point, IoU, trajectory evaluators
 │   ├── generation/        # Generation-stage nodes
 │   ├── inference/         # Async API client, checkpoints, image handling, local HF client
 │   ├── pipeline/          # Dataflow nodes and executor

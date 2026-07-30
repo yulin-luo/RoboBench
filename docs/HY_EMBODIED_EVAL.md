@@ -7,6 +7,8 @@ release:
 - `RoboBench-MCQ`
 - `RoboBench-Planning`
 
+Here, **MCQ** means **Multiple-Choice Question**.
+
 We have asked the HY-Embodied maintainers to confirm the exact protocol they
 used for their reported numbers. Until that is clarified, the helper defaults to
 the public RoboBench settings below and keeps the dimensions configurable.
