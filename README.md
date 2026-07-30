@@ -23,6 +23,7 @@
 - 🤗 **Dataset**: [LeoFan01/RoboBench](https://huggingface.co/datasets/LeoFan01/RoboBench)
 - 📊 **Official results**: [lyl010221-pku/RoboBench-Results](https://huggingface.co/datasets/lyl010221-pku/RoboBench-Results)
 - 💬 **Prompts and pipeline**: [docs/PROMPTS_AND_PIPELINE.md](docs/PROMPTS_AND_PIPELINE.md)
+- 🧪 **MCQ and Planning evaluation**: [docs/HY_EMBODIED_EVAL.md](docs/HY_EMBODIED_EVAL.md)
 - 💻 **Code**: [github.com/yulin-luo/RoboBench](https://github.com/yulin-luo/RoboBench)
 
 > Accepted to **ECCV 2026**.
@@ -59,6 +60,42 @@ RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied 
 | **Generalized Planning** | Cross-embodiment, cross-object, cross-view, cross-attribute, world knowledge | Planning Q1/Q2/Q3 |
 | **Affordance Reasoning** | Static affordance, dynamic affordance, navigation visual prompts | Multi-choice |
 | **Error Analysis** | High-level planning errors, low-level execution errors | Multi-choice |
+
+## 🧪 RoboBench-MCQ and RoboBench-Planning
+
+For comparison with embodied foundation models such as
+[HY-Embodied](https://github.com/Tencent-Hunyuan/HY-Embodied), RoboBench provides
+two ready-to-run evaluation settings:
+
+| Setting | Included dimensions | Evaluation |
+| --- | --- | --- |
+| **RoboBench-MCQ** | **2, 4, and 5**: Perception and Reasoning, Affordance Reasoning, Error Analysis | Multiple-choice answer normalization and scoring |
+| **RoboBench-Planning** | **1 and 3**: Instruction Comprehension, Generalized Planning | Q1 multi-step planning, Q2 next-action prediction, and Q3 state estimation; planning responses can be judged by the evaluator model configured in `evaluation.planning.eval_model` |
+
+After completing the dataset, config, and model-server setup described below,
+run either setting with one command:
+
+```bash
+# Preview the dimensions without running inference.
+ROBOBENCH_CONFIG=config/benchmark.example.yaml \
+  bash scripts/run_hy_embodied_eval.sh dry-run
+
+# Run one setting, or replace mcq with planning/all.
+ROBOBENCH_MODEL=hy_a3b \
+  bash scripts/run_hy_embodied_eval.sh mcq
+```
+
+The helper calls the model through an OpenAI-compatible
+`/v1/chat/completions` endpoint; it does not load model weights directly. See
+[Evaluating HY-Embodied on RoboBench](docs/HY_EMBODIED_EVAL.md) for the vLLM
+serving example, configuration, smoke test, protocol overrides, and output
+locations.
+
+The mapping above is the current RoboBench-side interpretation of the two
+reported HY-Embodied settings. We are tracking confirmation of the exact
+reported protocol in
+[Tencent-Hunyuan/HY-Embodied#14](https://github.com/Tencent-Hunyuan/HY-Embodied/issues/14#issuecomment-5070118229)
+and will synchronize the helper if their protocol differs.
 
 ## ⚙️ Installation
 
