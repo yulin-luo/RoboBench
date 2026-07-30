@@ -60,7 +60,7 @@ case "$MODE" in
     ;;
 esac
 
-if [[ -z "$MODEL" ]]; then
+if [[ "$MODE" != "dry-run" && -z "$MODEL" ]]; then
   echo "ERROR: ROBOBENCH_MODEL is required." >&2
   usage >&2
   exit 2
@@ -76,6 +76,7 @@ if [[ "$MODE" == "smoke" && -z "$MAX_SAMPLES" ]]; then
   MAX_SAMPLES=1
 fi
 
+if [[ "$MODE" != "dry-run" ]]; then
 python - "$CONFIG" "$MODEL" <<'PY'
 import sys
 from pathlib import Path
@@ -97,6 +98,7 @@ if model not in names:
     print("    vision: true", file=sys.stderr)
     sys.exit(2)
 PY
+fi
 
 run_robobench() {
   if command -v robobench >/dev/null 2>&1; then
@@ -115,7 +117,7 @@ run_dimension() {
 
   echo
   echo "================================================================"
-  echo "RoboBench dimension: $dimension | model: $MODEL | run: $RUN_ID"
+  echo "RoboBench dimension: $dimension | model: ${MODEL:-<set ROBOBENCH_MODEL>} | run: $RUN_ID"
   echo "================================================================"
   if [[ "$MODE" == "dry-run" ]]; then
     echo "Would run inference and evaluation for this dimension."

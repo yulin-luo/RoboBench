@@ -138,6 +138,11 @@ ROBOBENCH_MODEL=hy_a3b \
   bash scripts/run_hy_embodied_eval.sh dry-run
 ```
 
+`dry-run` can also be used before adding the model entry to
+`config/benchmark.yaml`; it only previews the selected dimensions. Real
+`smoke`, `mcq`, `planning`, and `all` runs still require the served model name
+to be present in `config/benchmark.yaml`.
+
 Then run a two-dimension smoke test with one sample per dimension:
 
 ```bash
