@@ -304,11 +304,14 @@ ruff check src/
 If you use RoboBench in your research, please cite:
 
 ```bibtex
-@article{luo2025robobench,
-  title={RoboBench: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models as Embodied Brain},
-  author={Luo, Yulin and Fan, Chun-Kai and Dong, Menghang and Shi, Jiayu and Mi, Xiangju and Zhao, Mengdi and Zhang, Bo-Wen and Chi, Cheng and Liu, Jiaming and Dai, Gaole and Zhang, Rongyu and An, Ruichuan and Wu, Kun and Che, Zhengping and Xie, Shaoxuan and Yao, Guocai and Zhao, Zhongxia and Wang, Pengwei and Liu, Guang and Wang, Zhongyuan and Huang, Tiejun and Zhang, Shanghang},
-  journal={arXiv preprint arXiv:2510.17801},
-  year={2025}
+@misc{luo2026robobenchcomprehensiveevaluationbenchmark,
+      title={Robobench: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models as Embodied Brain},
+      author={Yulin Luo and Chun-Kai Fan and Menghang Dong and Jiayu Shi and Xiangju Mi and Mengdi Zhao and Bo-Wen Zhang and Cheng Chi and Jiaming Liu and Gaole Dai and Rongyu Zhang and Ruichuan An and Kun Wu and Zhengping Che and Shaoxuan Xie and Guocai Yao and Zhongxia Zhao and Pengwei Wang and Guang Liu and Zhongyuan Wang and Tiejun Huang and Shanghang Zhang},
+      year={2026},
+      eprint={2510.17801},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2510.17801},
 }
 ```
 

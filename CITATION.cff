@@ -1,0 +1,110 @@
+cff-version: 1.2.0
+message: "If you use RoboBench in your research, please cite the arXiv paper below."
+title: "RoboBench"
+type: software
+authors:
+  - family-names: Luo
+    given-names: Yulin
+  - family-names: Fan
+    given-names: Chun-Kai
+  - family-names: Dong
+    given-names: Menghang
+  - family-names: Shi
+    given-names: Jiayu
+  - family-names: Mi
+    given-names: Xiangju
+  - family-names: Zhao
+    given-names: Mengdi
+  - family-names: Zhang
+    given-names: Bo-Wen
+  - family-names: Chi
+    given-names: Cheng
+  - family-names: Liu
+    given-names: Jiaming
+  - family-names: Dai
+    given-names: Gaole
+  - family-names: Zhang
+    given-names: Rongyu
+  - family-names: An
+    given-names: Ruichuan
+  - family-names: Wu
+    given-names: Kun
+  - family-names: Che
+    given-names: Zhengping
+  - family-names: Xie
+    given-names: Shaoxuan
+  - family-names: Yao
+    given-names: Guocai
+  - family-names: Zhao
+    given-names: Zhongxia
+  - family-names: Wang
+    given-names: Pengwei
+  - family-names: Liu
+    given-names: Guang
+  - family-names: Wang
+    given-names: Zhongyuan
+  - family-names: Huang
+    given-names: Tiejun
+  - family-names: Zhang
+    given-names: Shanghang
+url: "https://arxiv.org/abs/2510.17801"
+repository-code: "https://github.com/yulin-luo/RoboBench"
+abstract: "RoboBench is a comprehensive benchmark for evaluating multimodal large language models as embodied brains across instruction comprehension, perception reasoning, generalized planning, affordance prediction, and failure analysis."
+keywords:
+  - embodied AI
+  - robotics
+  - multimodal large language models
+  - benchmark
+  - RoboBench
+preferred-citation:
+  type: generic
+  title: "Robobench: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models as Embodied Brain"
+  authors:
+    - family-names: Luo
+      given-names: Yulin
+    - family-names: Fan
+      given-names: Chun-Kai
+    - family-names: Dong
+      given-names: Menghang
+    - family-names: Shi
+      given-names: Jiayu
+    - family-names: Mi
+      given-names: Xiangju
+    - family-names: Zhao
+      given-names: Mengdi
+    - family-names: Zhang
+      given-names: Bo-Wen
+    - family-names: Chi
+      given-names: Cheng
+    - family-names: Liu
+      given-names: Jiaming
+    - family-names: Dai
+      given-names: Gaole
+    - family-names: Zhang
+      given-names: Rongyu
+    - family-names: An
+      given-names: Ruichuan
+    - family-names: Wu
+      given-names: Kun
+    - family-names: Che
+      given-names: Zhengping
+    - family-names: Xie
+      given-names: Shaoxuan
+    - family-names: Yao
+      given-names: Guocai
+    - family-names: Zhao
+      given-names: Zhongxia
+    - family-names: Wang
+      given-names: Pengwei
+    - family-names: Liu
+      given-names: Guang
+    - family-names: Wang
+      given-names: Zhongyuan
+    - family-names: Huang
+      given-names: Tiejun
+    - family-names: Zhang
+      given-names: Shanghang
+  year: 2026
+  identifiers:
+    - type: url
+      value: "https://arxiv.org/abs/2510.17801"
