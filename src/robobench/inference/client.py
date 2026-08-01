@@ -12,7 +12,6 @@ Consolidates the best features from all api_utils.py versions:
 import asyncio
 from typing import Any, Dict, List, Optional
 
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from openai import (
     APIConnectionError,
     APIStatusError,
@@ -21,6 +20,7 @@ from openai import (
     InternalServerError,
     RateLimitError,
 )
+from tenacity import AsyncRetrying, retry_if_exception, stop_after_attempt, wait_exponential
 
 from .checkpoint import CheckpointManager
 
@@ -33,8 +33,8 @@ def _should_retry_api_error(exc: BaseException) -> bool:
     ):
         return True
     if isinstance(exc, APIStatusError):
-        status_code = getattr(exc, "status_code", None)
-        return status_code == 429 or (status_code is not None and status_code >= 500)
+        status_code = exc.status_code
+        return status_code == 429 or status_code >= 500
     return False
 
 
@@ -61,23 +61,33 @@ class AsyncModelClient:
         self.max_concurrent = api_config.api_max_concurrent
         self.retry_attempts = api_config.retry_attempts
         self.task_timeout = api_config.task_timeout
-        self.extra_body = getattr(api_config, "extra_body", {}) or {}
-        self.max_tokens = getattr(api_config, "max_tokens", None)
+        self.extra_body = api_config.extra_body
+        self.max_tokens = api_config.max_tokens
         backoff = api_config.retry_backoff
-        self.backoff_multiplier = backoff.get("multiplier", 1)
-        self.backoff_min = backoff.get("min", 1)
-        self.backoff_max = backoff.get("max", 10)
+        self.backoff_multiplier = backoff.multiplier
+        self.backoff_min = backoff.min
+        self.backoff_max = backoff.max
 
-    @retry(
-        stop=stop_after_attempt(10),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception(_should_retry_api_error),
-        reraise=True,
-    )
     async def _call_api(
         self, messages: list, request_id: str, semaphore: asyncio.Semaphore, model: str
     ) -> Dict[str, Any]:
         """Single API call with retry."""
+        retrying = AsyncRetrying(
+            stop=stop_after_attempt(self.retry_attempts),
+            wait=wait_exponential(
+                multiplier=self.backoff_multiplier,
+                min=self.backoff_min,
+                max=self.backoff_max,
+            ),
+            retry=retry_if_exception(_should_retry_api_error),
+            reraise=True,
+        )
+        return await retrying(self._call_api_once, messages, request_id, semaphore, model)
+
+    async def _call_api_once(
+        self, messages: list, request_id: str, semaphore: asyncio.Semaphore, model: str
+    ) -> Dict[str, Any]:
+        """Execute one API attempt."""
         resp = {"id": request_id}
         # Provider-aware adaptation: Dubrify's OpenAI-compat layer does not translate
         # image_url -> image for Anthropic models, and Anthropic requires max_tokens.
@@ -87,8 +97,8 @@ class AsyncModelClient:
             kwargs["extra_body"] = self.extra_body
         if self.max_tokens is not None:
             kwargs["max_tokens"] = self.max_tokens
-        if self._is_anthropic(model):
-            kwargs.setdefault("max_tokens", 4096)
+        if self._is_anthropic(model) and self.max_tokens is None:
+            raise ValueError("api.max_tokens is required for Anthropic models")
         try:
             async with semaphore:
                 async with AsyncOpenAI(
@@ -105,10 +115,7 @@ class AsyncModelClient:
                 resp["model"] = model
                 return resp
         except Exception as e:
-            print(
-                f"Error in API call for request_id {request_id}: "
-                f"{type(e).__name__} - {str(e)}"
-            )
+            print(f"Error in API call for request_id {request_id}: {type(e).__name__} - {str(e)}")
             raise
 
     @staticmethod
@@ -129,19 +136,15 @@ class AsyncModelClient:
             return messages
         out = []
         for msg in messages:
-            content = msg.get("content")
+            content = msg["content"]
             if isinstance(content, list):
                 new_content = []
                 for c in content:
-                    if isinstance(c, dict) and c.get("type") == "image_url":
-                        url = (c.get("image_url") or {}).get("url", "")
+                    if isinstance(c, dict) and c["type"] == "image_url":
+                        url = c["image_url"]["url"]
                         if url.startswith("data:"):
-                            # data:image/png;base64,XXX  -> media_type=image/png, data=XXX
-                            try:
-                                header, b64 = url.split(",", 1)
-                                media_type = header.split(":", 1)[1].split(";", 1)[0]
-                            except ValueError:
-                                media_type, b64 = "image/png", ""
+                            header, b64 = url.split(",", 1)
+                            media_type = header.split(":", 1)[1].split(";", 1)[0]
                             new_content.append(
                                 {
                                     "type": "image",
@@ -186,18 +189,13 @@ class AsyncModelClient:
 
             if completed_counter[0] % 100 == 0:
                 print(f"Completed {completed_counter[0]} tasks")
-                await self._save_temp_results(
-                    [r for r in results if r is not None], save_path
-                )
+                await self._save_temp_results([r for r in results if r is not None], save_path)
 
             return index, result
 
         except asyncio.TimeoutError:
             failed_counter[0] += 1
-            print(
-                f"Task {request_id} (index {index}) timed out after "
-                f"{self.task_timeout} seconds"
-            )
+            print(f"Task {request_id} (index {index}) timed out after {self.task_timeout} seconds")
             return index, {
                 "id": request_id,
                 "response": None,
@@ -220,8 +218,9 @@ class AsyncModelClient:
 
     async def _save_temp_results(self, results: list, save_path: str) -> None:
         """Save intermediate results to temp file."""
-        import aiofiles
         import json as _json
+
+        import aiofiles
 
         temp_file = f"{save_path}_temp_result.json"
         async with aiofiles.open(temp_file, "w", encoding="utf-8") as f:
@@ -247,32 +246,30 @@ class AsyncModelClient:
         Returns:
             List of result dictionaries
         """
-        import json as _json
-
         semaphore = asyncio.Semaphore(self.max_concurrent)
 
-        # Resume from checkpoint if available
+        results = [None] * len(prompts)
+        existing_by_id = {}
         if checkpoint:
-            resume_idx = checkpoint.get_resume_index()
-            existing = checkpoint.get_existing_results()
-            if resume_idx > 0:
-                print(f"Resuming from index {resume_idx} (checkpoint found)")
-                results = existing + [None] * (len(prompts) - len(existing))
-            else:
-                results = [None] * len(prompts)
-        else:
-            resume_idx = 0
-            results = [None] * len(prompts)
+            existing_by_id = {
+                result["id"]: result
+                for result in checkpoint.get_existing_results()
+                if result is not None and result["response"] is not None
+            }
+            if existing_by_id:
+                print(f"Resuming with {len(existing_by_id)} completed requests")
 
         completed_count = [0]
         failed_count = [0]
 
         # Create tasks only for items not yet processed
         tasks = []
-        for i in range(resume_idx, len(prompts)):
-            prompt = prompts[i]
-            request_id = prompt.get("request_id", i)
-            messages = prompt.get("messages", [])
+        for i, prompt in enumerate(prompts):
+            request_id = prompt["request_id"]
+            if request_id in existing_by_id:
+                results[i] = existing_by_id[request_id]
+                continue
+            messages = prompt["messages"]
 
             # If not using vision, strip image content
             if not use_vision:
@@ -291,43 +288,32 @@ class AsyncModelClient:
             )
             tasks.append(task)
 
-        print(
-            f"Starting to process {len(tasks)} tasks, "
-            f"max concurrent: {self.max_concurrent}"
-        )
+        print(f"Starting to process {len(tasks)} tasks, max concurrent: {self.max_concurrent}")
 
         # Execute tasks
         completed_tasks = 0
         for future in asyncio.as_completed(tasks):
-            try:
-                index, result = await future
-                results[index] = result
-                completed_tasks += 1
+            index, result = await future
+            results[index] = result
+            completed_tasks += 1
 
-                if completed_tasks % 50 == 0 or completed_tasks == len(tasks):
-                    progress = completed_tasks / len(tasks) * 100 if tasks else 100
-                    print(
-                        f"Progress: {completed_tasks}/{len(tasks)} "
-                        f"({progress:.1f}%) - "
-                        f"Success: {completed_count[0]}, Failed: {failed_count[0]}"
-                    )
+            if completed_tasks % 50 == 0 or completed_tasks == len(tasks):
+                progress = completed_tasks / len(tasks) * 100 if tasks else 100
+                print(
+                    f"Progress: {completed_tasks}/{len(tasks)} "
+                    f"({progress:.1f}%) - "
+                    f"Success: {completed_count[0]}, Failed: {failed_count[0]}"
+                )
 
-                    if checkpoint:
-                        checkpoint.save(results, resume_idx + completed_tasks - 1)
+                if checkpoint:
+                    checkpoint.save(results)
 
-            except Exception as e:
-                print(f"Unexpected error in task completion: {e}")
-                continue
-
-        print(
-            f"All tasks completed! Success: {completed_count[0]}, "
-            f"Failed: {failed_count[0]}"
-        )
+        print(f"All tasks completed! Success: {completed_count[0]}, Failed: {failed_count[0]}")
 
         # Final save
         await self._save_temp_results(results, save_path)
         if checkpoint:
-            checkpoint.save(results, len(results) - 1)
+            checkpoint.save(results)
 
         return results
 
@@ -336,11 +322,10 @@ class AsyncModelClient:
         """Remove image content from messages for text-only ablation."""
         stripped = []
         for msg in messages:
-            if msg.get("role") == "user":
-                content = msg.get("content", [])
+            if msg["role"] == "user":
+                content = msg["content"]
                 if isinstance(content, list):
-                    # Filter out image_url entries
-                    text_only = [c for c in content if c.get("type") != "image_url"]
+                    text_only = [c for c in content if c["type"] != "image_url"]
                     stripped.append({"role": "user", "content": text_only})
                 else:
                     stripped.append(msg)

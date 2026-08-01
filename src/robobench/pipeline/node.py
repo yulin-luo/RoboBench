@@ -6,7 +6,8 @@ Nodes are connected by RunContext, which carries state between stages.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List
 
 from .context import RunContext
 
@@ -75,50 +76,36 @@ class PipelineNode(ABC):
 
 
 class LoadDatasetNode(PipelineNode):
-    """Load questions and metadata for a given dimension/subtask."""
+    """Load questions for a given dimension/subtask."""
 
     name = "load_dataset"
     inputs = [NodeInput("dimension", "memory"), NodeInput("subtask", "memory")]
-    outputs = [NodeOutput("questions", "memory"), NodeOutput("metadata", "memory")]
+    outputs = [NodeOutput("questions", "memory")]
 
     def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         from robobench.data.dataset import RoboBenchDataset
 
         dimension = inputs["dimension"]
-        subtask = inputs.get("subtask", "")
-        max_samples = inputs.get("max_samples")
+        subtask = inputs["subtask"]
+        max_samples = inputs["max_samples"]
         paths = self.context.config.paths
-        dataset = RoboBenchDataset(
-            data_root=paths.data_root,
-            middle_file_dir=getattr(paths, "middle_file_dir", ""),
-        )
+        dataset = RoboBenchDataset(data_root=paths.data_root)
         questions = dataset.load_questions(dimension, subtask, max_samples=max_samples)
-        metadata = dataset.load_metadata(dimension, subtask)
-        return {"questions": questions, "metadata": metadata}
+        return {"questions": questions}
 
 
 class BuildPromptsNode(PipelineNode):
     """Construct API-ready prompts from questions."""
 
     name = "build_prompts"
-    inputs = [
-        NodeInput("questions", "memory"),
-        NodeInput("dimension_config", "memory"),
-    ]
+    inputs = [NodeInput("questions", "memory")]
     outputs = [NodeOutput("prompts", "file"), NodeOutput("prompt_count", "memory")]
 
     def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         from robobench.prompts.builder import PromptBuilder
 
         questions = inputs["questions"]
-        dim_config = inputs["dimension_config"]
-        paths = self.context.config.paths
-        builder = PromptBuilder(
-            data_root=paths.data_root,
-            system_prompt_key=dim_config.system_prompt_key,
-            old_prefix=getattr(paths, "old_prefix", "/share/project/test/robobench/robobench"),
-            new_prefix=getattr(paths, "new_prefix", paths.data_root),
-        )
+        builder = PromptBuilder()
         prompts = builder.build(questions, mode="base64")
         output_path = self.context.get_temp_path("prompts.jsonl")
         builder.save(prompts, output_path)
@@ -140,15 +127,15 @@ class RunInferenceNode(PipelineNode):
         import asyncio
         import json
 
-        from robobench.inference.client import AsyncModelClient
         from robobench.inference.checkpoint import CheckpointManager
+        from robobench.inference.client import AsyncModelClient
 
         prompts_path = inputs["prompts"]
         model_name = inputs["model_name"]
-        use_vision = inputs.get("vision", True)
-        dimension = inputs.get("dimension", "")
-        subtask = inputs.get("subtask", "")
-        task_label = "_".join(part for part in [dimension, subtask] if part) or "all"
+        use_vision = inputs["vision"]
+        dimension = inputs["dimension"]
+        subtask = inputs["subtask"]
+        task_label = f"{dimension}_{subtask}"
         safe_task_label = task_label.replace("/", "_").replace("-", "_")
         safe_model_name = model_name.replace("/", "_").replace("-", "_")
 
@@ -176,22 +163,24 @@ class RunInferenceNode(PipelineNode):
 
         # Save results
         for idx, result in enumerate(results):
-            if not isinstance(result, dict) or idx >= len(prompts):
-                continue
+            if not isinstance(result, dict):
+                raise TypeError(f"Expected inference result {idx} to be a dictionary")
             prompt = prompts[idx]
-            raw_question = prompt.get("raw_question") or {}
-            result.setdefault("request_id", prompt.get("request_id", result.get("id")))
-            if raw_question:
-                result.setdefault("raw_question", raw_question)
-                for key in ("gt_answer", "ground_truth", "question_type", "task_type", "options"):
-                    if raw_question.get(key) is not None:
-                        result.setdefault(key, raw_question[key])
+            raw_question = prompt["raw_question"]
+            result["request_id"] = prompt["request_id"]
+            result["raw_question"] = raw_question
+            result["gt_answer"] = raw_question["gt_answer"]
+            result["task_type"] = raw_question["task_type"]
+            if "question_type" in raw_question:
+                result["question_type"] = raw_question["question_type"]
+            if "options" in raw_question:
+                result["options"] = raw_question["options"]
 
         result_path = self.context.get_result_path(model_name, suffix=f"{safe_task_label}/raw.json")
         with open(result_path, "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
 
-        valid_count = sum(1 for r in results if r and r.get("response"))
+        valid_count = sum(1 for result in results if result["response"])
         return {"raw_responses": str(result_path), "valid_count": valid_count}
 
 
@@ -202,19 +191,34 @@ class EvaluateNode(PipelineNode):
     inputs = [
         NodeInput("raw_responses", "file"),
         NodeInput("eval_type", "memory"),
-        NodeInput("eval_config", "memory"),
     ]
     outputs = [NodeOutput("evaluated_results", "file"), NodeOutput("scores", "memory")]
 
     def run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         import json
-        from pathlib import Path
 
         from robobench.evaluation.base import get_evaluator
 
         eval_type = inputs["eval_type"]
-        eval_config = inputs["eval_config"]
         raw_path = inputs["raw_responses"]
+
+        if eval_type == "planning":
+            eval_config = {
+                "eval_model": self.context.config.evaluation.planning.eval_model,
+                "data_root": self.context.config.paths.data_root,
+                "api": self.context.config.evaluation.api,
+                "batch_save_prefix": str(Path(raw_path).parent / "judge"),
+            }
+        elif eval_type == "multi_choice":
+            eval_config = {
+                "gpt_model": self.context.config.evaluation.multi_choice.gpt_model,
+                "normalize_with_gpt": (
+                    self.context.config.evaluation.multi_choice.normalize_with_gpt
+                ),
+                "api": self.context.config.evaluation.api,
+            }
+        else:
+            eval_config = {}
 
         with open(raw_path, "r", encoding="utf-8") as f:
             results = json.load(f)
@@ -249,6 +253,11 @@ class AggregateScoresNode(PipelineNode):
         stats_path = Path(self.context.config.paths.results_root) / "aggregated" / "statistics.json"
         stats_path.parent.mkdir(parents=True, exist_ok=True)
         with open(stats_path, "w", encoding="utf-8") as f:
-            json.dump({"aggregated": aggregated, "statistics": stats}, f, ensure_ascii=False, indent=2)
+            json.dump(
+                {"aggregated": aggregated, "statistics": stats},
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
 
         return {"aggregated": aggregated, "statistics": stats}

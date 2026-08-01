@@ -70,14 +70,14 @@ two ready-to-run evaluation settings. Here, **MCQ** means
 
 | Setting | Included dimensions | Evaluation |
 | --- | --- | --- |
-| **RoboBench-MCQ** | **2, 4, and 5**: Perception and Reasoning, Affordance Reasoning, Error Analysis | Multiple-choice answer normalization and scoring |
-| **RoboBench-Planning** | **1 and 3**: Instruction Comprehension, Generalized Planning | Q1 multi-step planning, Q2 next-action prediction, and Q3 state estimation; planning responses can be judged by the evaluator model configured in `evaluation.planning.eval_model` |
+| **RoboBench-MCQ** | **2, 4, and 5**: 13 subtasks, 1,895 questions | Multiple-choice answer normalization and scoring |
+| **RoboBench-Planning** | **1 and 3**: 19 subtasks, 4,197 questions | Q1 multi-step planning, Q2 next-action prediction, and Q3 state estimation; planning responses are judged by the evaluator model configured under `evaluation.planning` |
 
 After completing the dataset, config, and model-server setup described below,
 run either setting with one command:
 
 ```bash
-# Preview the dimensions without running inference.
+# Validate the released metadata without running inference.
 ROBOBENCH_CONFIG=config/benchmark.example.yaml \
   bash scripts/run_hy_embodied_eval.sh dry-run
 
@@ -89,8 +89,7 @@ ROBOBENCH_MODEL=hy_a3b \
 The helper calls the model through an OpenAI-compatible
 `/v1/chat/completions` endpoint; it does not load model weights directly. See
 [Evaluating HY-Embodied on RoboBench](docs/HY_EMBODIED_EVAL.md) for the vLLM
-serving example, configuration, smoke test, protocol overrides, and output
-locations.
+serving example, configuration, smoke test, and output locations.
 
 The mapping above is the current RoboBench-side interpretation of the two
 reported HY-Embodied settings. We are tracking confirmation of the exact
@@ -123,12 +122,32 @@ pip install -e ".[local]"
 Download the released RoboBench dataset from Hugging Face and point the config to the local copy.
 
 ```bash
-huggingface-cli download \
-  --repo-type dataset LeoFan01/RoboBench \
+hf download LeoFan01/RoboBench \
+  --repo-type dataset \
   --local-dir data/RoboBench-hf
 ```
 
-The pipeline uses prompt-ready question JSONL files from `paths.middle_file_dir` and uses `paths.data_root` to resolve images and released `questions.json` metadata. If your dataset package stores these JSONL files outside `data/RoboBench-hf`, keep that directory as a sibling `data/middle_file`.
+The downloaded directory is the complete runtime data source. RoboBench reads
+the 32 released `questions.json` files and `system_prompt.json`, constructs the
+prompts deterministically, and resolves every image under `paths.data_root`.
+No separately generated prompt files or path-prefix rewrite configuration is
+required.
+
+Validate the released question metadata before inference:
+
+```bash
+robobench --config config/benchmark.yaml inspect-data --metadata-only
+```
+
+After all images are downloaded, run the stricter file check:
+
+```bash
+robobench --config config/benchmark.yaml inspect-data
+```
+
+The complete release contains 32 subtasks, 6,092 questions, and 37,126 image
+references. `RoboBench-MCQ` covers 13 subtasks and 1,895 questions;
+`RoboBench-Planning` covers 19 subtasks and 4,197 questions.
 
 Official score tables and model-output JSON files are hosted separately to keep this repository lightweight:
 
@@ -154,10 +173,10 @@ cp config/benchmark.example.yaml config/benchmark.yaml
 export DUBRIFY_API_KEY="your-api-key"
 export ROBOBENCH_API_BASE_URL="https://your-endpoint/v1"
 export ROBOBENCH_DATA_ROOT="$PWD/data/RoboBench-hf"
-export ROBOBENCH_MIDDLE_FILE_DIR="$PWD/data/middle_file"
 export ROBOBENCH_RESULTS_ROOT="$PWD/results"
 export ROBOBENCH_CACHE_DIR="$PWD/cache"
-export ROBOBENCH_OLD_IMAGE_PREFIX=""
+export ROBOBENCH_JUDGE_API_BASE_URL="https://your-judge-endpoint/v1"
+export ROBOBENCH_JUDGE_API_KEY="your-judge-api-key"
 ```
 
 Edit `config/benchmark.yaml` to choose models, dimensions, and concurrency settings. Keep `config/benchmark.yaml` local; it is intentionally ignored by git.
@@ -229,12 +248,13 @@ Most behavior is controlled from `config/benchmark.yaml`.
 
 | Field | Description |
 | --- | --- |
-| `api.base_url` | OpenAI-compatible API endpoint |
-| `api.api_key` | API key, usually supplied as `${DUBRIFY_API_KEY}` |
-| `api.max_concurrent` | Task-level concurrency setting |
+| `api.base_url` | OpenAI-compatible endpoint for the model being evaluated |
+| `api.api_key` | API key for the model endpoint, usually supplied as `${DUBRIFY_API_KEY}` |
 | `api.api_max_concurrent` | Request-level API concurrency |
 | `api.task_timeout` | Per-request timeout in seconds |
 | `api.retry_attempts` | Maximum retry attempts for transient failures |
+| `evaluation.planning.eval_model` | Model used to judge Planning Q1/Q2/Q3 responses |
+| `evaluation.api` | Independent OpenAI-compatible API configuration for Planning judging and optional MCQ answer normalization |
 
 ### 🧠 Model Selection
 
@@ -256,7 +276,6 @@ dimensions:
   perception_reasoning:
     enabled: true
     eval_type: "multi_choice"
-    system_prompt_key: "perception"
     subtasks:
       - static_attribute
       - spatial_relation
@@ -266,11 +285,9 @@ dimensions:
 
 | Field | Description |
 | --- | --- |
-| `paths.data_root` | Local RoboBench dataset directory |
-| `paths.middle_file_dir` | Directory containing question JSONL files |
+| `paths.data_root` | Local RoboBench dataset directory containing `system_prompt.json`, released `questions.json` files, and images |
 | `paths.results_root` | Model outputs and evaluated scores |
 | `paths.cache_dir` | Checkpoints and temporary files |
-| `paths.old_prefix` / `paths.new_prefix` | Image-path prefix rewrite for released dataset paths |
 
 ## 🗂️ Project Structure
 
@@ -280,7 +297,7 @@ RoboBench/
 │   └── benchmark.example.yaml
 ├── src/robobench/
 │   ├── analysis/          # Dataset and correlation analysis utilities
-│   ├── data/              # Dataset loading from question JSONL files
+│   ├── data/              # Dataset loading from released questions.json files
 │   ├── evaluation/        # Multiple-choice, planning, point, IoU, trajectory evaluators
 │   ├── generation/        # Generation-stage nodes
 │   ├── inference/         # Async API client, checkpoints, image handling, local HF client
@@ -296,7 +313,7 @@ RoboBench/
 
 | Evaluator | What it checks |
 | --- | --- |
-| `multi_choice` | Multiple-choice, yes/no, and open-ended response normalization/scoring |
+| `multi_choice` | Multiple-choice answer normalization and exact scoring |
 | `planning` | Q1 multi-step plans, Q2 single-step actions, Q3 state estimation |
 | `point` | Distance between predicted and ground-truth coordinates |
 | `iou` | Bounding-box intersection over union |
@@ -307,23 +324,16 @@ Planning evaluation can call an evaluator model, configured by `evaluation.plann
 ## 💬 Prompt Builder Example
 
 ```python
+from robobench.data.dataset import RoboBenchDataset
 from robobench.prompts.builder import PromptBuilder
 
-builder = PromptBuilder(
-    data_root="data/RoboBench-hf",
-    system_prompt_key="skill_list",
-    old_prefix="",
-    new_prefix="data/RoboBench-hf",
+dataset = RoboBenchDataset("data/RoboBench-hf")
+questions = dataset.load_questions(
+    "perception_reasoning",
+    "static_attribute",
+    max_samples=1,
 )
-
-questions = [
-    {
-        "request_id": "example-0",
-        "question": "What action should the robot take next?",
-        "image_urls": ["data/RoboBench-hf/example.jpg"],
-    }
-]
-
+builder = PromptBuilder()
 prompts = builder.build(questions, mode="base64")
 builder.save(prompts, "prompts.jsonl")
 ```

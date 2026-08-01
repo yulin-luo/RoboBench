@@ -13,12 +13,7 @@ Supported model families:
 
 import asyncio
 import base64
-import json
-import re
-import sys
-import time
 from io import BytesIO
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from PIL import Image
@@ -26,8 +21,10 @@ from PIL import Image
 # We import torch/transformers lazily so that this module can be imported in
 # environments where only the API client is needed.
 
+
 def _import_torch():
     import torch
+
     return torch
 
 
@@ -47,7 +44,7 @@ def _decode_base64_image(url: str) -> Tuple[Image.Image, str]:
     if not url.startswith("data:"):
         raise ValueError(f"Expected data URL, got {url[:60]}...")
     header, _, b64 = url.partition(",")
-    media_type = header.split(":")[1].split(";")[0] if ":" in header else "image/jpeg"
+    media_type = header.split(":")[1].split(";")[0]
     data = base64.b64decode(b64)
     img = Image.open(BytesIO(data))
     if img.mode != "RGB":
@@ -64,32 +61,29 @@ def _openai_to_qwen_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, A
     """
     out = []
     for msg in messages:
-        role = msg.get("role", "user")
-        content = msg.get("content", "")
+        role = msg["role"]
+        content = msg["content"]
         if isinstance(content, str):
             out.append({"role": role, "content": content})
             continue
 
         new_content = []
         for item in content:
-            itype = item.get("type", "")
+            itype = item["type"]
             if itype == "text":
-                new_content.append({"type": "text", "text": item.get("text", "")})
+                new_content.append({"type": "text", "text": item["text"]})
             elif itype == "image_url":
-                url = (item.get("image_url") or {}).get("url", "")
+                url = item["image_url"]["url"]
                 if url.startswith("data:"):
                     img, _ = _decode_base64_image(url)
                     new_content.append({"type": "image", "image": img})
-                elif url:
-                    new_content.append({"type": "image", "image": url})
                 else:
-                    new_content.append({"type": "image", "image": ""})
+                    new_content.append({"type": "image", "image": url})
             elif itype in ("image", "video"):
                 # Already Qwen-style; keep as-is if it has a real image object.
                 new_content.append(item)
             else:
-                # Fallback: stringify unknown content parts.
-                new_content.append({"type": "text", "text": str(item)})
+                raise ValueError(f"Unsupported message content type: {itype}")
         out.append({"role": role, "content": new_content})
     return out
 
@@ -115,7 +109,9 @@ class LocalHFClient:
         transformers, AutoProcessor, AutoModelClass = _import_transformers()
 
         self.model_id = model_id
-        self.torch_dtype = getattr(torch, torch_dtype) if torch_dtype else torch.bfloat16
+        self.torch_dtype = (
+            torch.__dict__[torch_dtype] if torch_dtype is not None else torch.bfloat16
+        )
         self.token = token
         self.local_files_only = local_files_only
 
@@ -127,7 +123,9 @@ class LocalHFClient:
             local_files_only=local_files_only,
         )
 
-        print(f"[LocalHF] Loading model {model_id} (dtype={self.torch_dtype}, device_map={device_map}) ...")
+        print(
+            f"[LocalHF] Loading model {model_id} (dtype={self.torch_dtype}, device_map={device_map}) ..."
+        )
         self.model = AutoModelClass.from_pretrained(
             model_id,
             torch_dtype=self.torch_dtype,
@@ -162,12 +160,12 @@ class LocalHFClient:
         # same order as <|image_pad|> tokens in the prompt text.
         images = []
         for msg in qwen_messages:
-            content = msg.get("content", [])
+            content = msg["content"]
             if not isinstance(content, list):
                 continue
             for item in content:
-                if item.get("type") == "image":
-                    images.append(item.get("image"))
+                if item["type"] == "image":
+                    images.append(item["image"])
 
         inputs = self.processor(
             text=[text],
@@ -229,12 +227,12 @@ class LocalHFClient:
 
             images = []
             for msg in qwen_messages:
-                content = msg.get("content", [])
+                content = msg["content"]
                 if not isinstance(content, list):
                     continue
                 for item in content:
-                    if item.get("type") == "image":
-                        images.append(item.get("image"))
+                    if item["type"] == "image":
+                        images.append(item["image"])
             all_images.append(images)
 
         # Build per-sample image lists. The processor handles padding and
@@ -274,7 +272,7 @@ class LocalHFAsyncClient:
     """Async wrapper around LocalHFClient for compatibility with run_e4_inference.
 
     Runs the blocking `generate()` call in a thread pool so that multiple
-    middle_files can be processed concurrently at the request level.
+    prompt batches can be processed concurrently at the request level.
     """
 
     def __init__(self, model_id: str, batch_size: int = 4, **kwargs):
@@ -301,22 +299,18 @@ class LocalHFAsyncClient:
         save_path: str = "results",
         max_new_tokens: int = 512,
     ) -> List[Dict[str, Any]]:
-        import json as _json
-
         client = self._ensure_client()
 
-        # Resume from checkpoint if available
+        results = [None] * len(prompts)
+        existing_by_id = {}
         if checkpoint:
-            resume_idx = checkpoint.get_resume_index()
-            existing = checkpoint.get_existing_results()
-            if resume_idx > 0:
-                print(f"[LocalHF] Resuming from index {resume_idx}")
-                results = existing + [None] * (len(prompts) - len(existing))
-            else:
-                results = [None] * len(prompts)
-        else:
-            resume_idx = 0
-            results = [None] * len(prompts)
+            existing_by_id = {
+                result["id"]: result
+                for result in checkpoint.get_existing_results()
+                if result is not None and result["response"] is not None
+            }
+            if existing_by_id:
+                print(f"[LocalHF] Resuming with {len(existing_by_id)} completed requests")
 
         completed = 0
         failed = 0
@@ -325,10 +319,18 @@ class LocalHFAsyncClient:
         # asyncio/thread-pool concurrency for transformers on a single GPU,
         # because it avoids kernel launch contention and gives each sample
         # the full GPU bandwidth.
-        for i in range(resume_idx, len(prompts)):
-            prompt = prompts[i]
-            request_id = prompt.get("request_id", i)
-            messages = prompt.get("messages", [])
+        pending = [
+            (index, prompt)
+            for index, prompt in enumerate(prompts)
+            if prompt["request_id"] not in existing_by_id
+        ]
+        index_by_id = {prompt["request_id"]: index for index, prompt in enumerate(prompts)}
+        for request_id, result in existing_by_id.items():
+            results[index_by_id[request_id]] = result
+
+        for processed, (i, prompt) in enumerate(pending, start=1):
+            request_id = prompt["request_id"]
+            messages = prompt["messages"]
             if not use_vision:
                 messages = self._strip_vision(messages)
             try:
@@ -340,13 +342,13 @@ class LocalHFAsyncClient:
                 print(f"[LocalHF] Error on request {request_id}: {type(e).__name__}: {e}")
                 results[i] = {"id": request_id, "response": None, "error": str(e), "model": model}
 
-            if (completed + failed) % 50 == 0 or (completed + failed) == len(prompts):
+            if processed % 50 == 0 or processed == len(pending):
                 print(
-                    f"[LocalHF] Progress: {completed + failed}/{len(prompts)} "
+                    f"[LocalHF] Progress: {processed}/{len(pending)} "
                     f"(success={completed}, failed={failed})"
                 )
                 if checkpoint:
-                    checkpoint.save(results, resume_idx + completed + failed - 1)
+                    checkpoint.save(results)
 
         return results
 
@@ -354,10 +356,10 @@ class LocalHFAsyncClient:
     def _strip_vision(messages: list) -> list:
         stripped = []
         for msg in messages:
-            if msg.get("role") == "user":
-                content = msg.get("content", [])
+            if msg["role"] == "user":
+                content = msg["content"]
                 if isinstance(content, list):
-                    text_only = [c for c in content if c.get("type") != "image_url"]
+                    text_only = [c for c in content if c["type"] != "image_url"]
                     stripped.append({"role": "user", "content": text_only})
                 else:
                     stripped.append(msg)

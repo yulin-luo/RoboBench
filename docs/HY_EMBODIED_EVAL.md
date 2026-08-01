@@ -10,8 +10,8 @@ release:
 Here, **MCQ** means **Multiple-Choice Question**.
 
 We have asked the HY-Embodied maintainers to confirm the exact protocol they
-used for their reported numbers. Until that is clarified, the helper defaults to
-the public RoboBench settings below and keeps the dimensions configurable.
+used for their reported numbers. Until that is clarified, the helper uses the
+public RoboBench mapping below.
 The protocol clarification is tracked at:
 https://github.com/Tencent-Hunyuan/HY-Embodied/issues/14#issuecomment-5070118229
 
@@ -25,13 +25,15 @@ this helper.
 
 ## Default Mapping
 
-| Setting | Default RoboBench dimensions | Notes |
+| Setting | RoboBench dimensions | Coverage |
 | --- | --- | --- |
-| `RoboBench-MCQ` | `perception_reasoning affordance_reasoning error_analysis` | Dimensions 2, 4, and 5 use the multiple-choice evaluator. Override with `ROBOBENCH_HY_MCQ_DIMENSIONS` if you need a different protocol. |
-| `RoboBench-Planning` | `instruction_comprehension generalized_planning` | Dimensions 1 and 3 use the planning evaluator. Override with `ROBOBENCH_HY_PLANNING_DIMENSIONS` if the target protocol includes additional planning dimensions. |
+| `RoboBench-MCQ` | `perception_reasoning affordance_reasoning error_analysis` | Dimensions 2, 4, and 5: 13 subtasks, 1,895 questions |
+| `RoboBench-Planning` | `instruction_comprehension generalized_planning` | Dimensions 1 and 3: 19 subtasks, 4,197 questions |
 
-Planning evaluation can call an evaluator model configured by
-`evaluation.planning.eval_model` in `config/benchmark.yaml`.
+Planning evaluation calls the evaluator model configured under
+`evaluation.planning`. The shared `evaluation.api` configuration is independent
+from the HY model endpoint, so a local HY vLLM server can be used together with
+an external judge such as GPT-4o.
 
 ## Serve HY-Embodied
 
@@ -75,8 +77,8 @@ git clone https://github.com/yulin-luo/RoboBench.git
 cd RoboBench
 pip install -e .
 
-huggingface-cli download \
-  --repo-type dataset LeoFan01/RoboBench \
+hf download LeoFan01/RoboBench \
+  --repo-type dataset \
   --local-dir data/RoboBench-hf
 ```
 
@@ -120,32 +122,45 @@ Point RoboBench to your OpenAI-compatible endpoint and local paths:
 
 ```bash
 export ROBOBENCH_API_BASE_URL="http://127.0.0.1:8080/v1"
-export DUBRIFY_API_KEY="your-api-key-or-placeholder"
+export DUBRIFY_API_KEY="EMPTY"
 export ROBOBENCH_DATA_ROOT="$PWD/data/RoboBench-hf"
-export ROBOBENCH_MIDDLE_FILE_DIR="$PWD/data/middle_file"
 export ROBOBENCH_RESULTS_ROOT="$PWD/results"
 export ROBOBENCH_CACHE_DIR="$PWD/cache"
-export ROBOBENCH_OLD_IMAGE_PREFIX=""
+export ROBOBENCH_JUDGE_API_BASE_URL="https://your-judge-endpoint/v1"
+export ROBOBENCH_JUDGE_API_KEY="your-judge-api-key"
 ```
 
-If your endpoint does not require authentication, use any non-empty placeholder
-for `DUBRIFY_API_KEY`.
+`DUBRIFY_API_KEY=EMPTY` is sufficient for a local endpoint that does not require
+authentication. The judge variables are required by the strict config even for
+MCQ-only commands. For Planning, they must point to an endpoint serving the
+model named by `evaluation.planning.eval_model`.
+
+RoboBench reads the downloaded `questions.json` files and
+`system_prompt.json` directly. There is no additional prompt-data directory to
+download or generate.
 
 ## One-Command Runs
 
-Preview the selected dimensions first:
+Validate the 32 released subtask manifests first:
 
 ```bash
 ROBOBENCH_MODEL=hy_a3b \
   bash scripts/run_hy_embodied_eval.sh dry-run
 ```
 
-`dry-run` can also be used before adding the model entry to
-`config/benchmark.yaml`; it only previews the selected dimensions. Real
-`smoke`, `mcq`, `planning`, and `all` runs still require the served model name
-to be present in `config/benchmark.yaml`.
+`dry-run` validates 6,092 questions and 37,126 image references without making
+API calls or checking whether all image files have been downloaded. It can be
+used before adding the model entry to `config/benchmark.yaml`. For a strict
+image-file check, run:
 
-Then run a two-dimension smoke test with one sample per dimension:
+```bash
+robobench --config config/benchmark.yaml inspect-data
+```
+
+Real `smoke`, `mcq`, `planning`, and `all` runs require the served model name to
+be present in `config/benchmark.yaml`.
+
+Then run one MCQ sample and one Planning Q1 sample:
 
 ```bash
 ROBOBENCH_MODEL=hy_a3b \
@@ -173,18 +188,6 @@ ROBOBENCH_MODEL=hy_a3b \
   bash scripts/run_hy_embodied_eval.sh all
 ```
 
-## Protocol Overrides
-
-Use environment variables to match a different reported protocol:
-
-```bash
-ROBOBENCH_MODEL=hy_a3b \
-ROBOBENCH_HY_MCQ_DIMENSIONS="perception_reasoning affordance_reasoning error_analysis" \
-ROBOBENCH_HY_PLANNING_DIMENSIONS="instruction_comprehension generalized_planning" \
-ROBOBENCH_RUN_ID=hy_embodied_run0 \
-  bash scripts/run_hy_embodied_eval.sh all
-```
-
 For quick debugging:
 
 ```bash
@@ -196,7 +199,12 @@ ROBOBENCH_MAX_SAMPLES=5 \
 ## Outputs
 
 Raw responses and evaluated outputs are written under `paths.results_root` from
-`config/benchmark.yaml`, typically `results/`.
+`config/benchmark.yaml`, typically:
+
+```text
+results/<run-id>/<model>/<dimension>_<subtask>/raw.json
+results/<run-id>/<model>/<dimension>_<subtask>/evaluated.json
+```
 
 Official RoboBench reference score tables and model-output JSON files are
 available at:

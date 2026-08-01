@@ -13,10 +13,9 @@ configured dataset root on the fly using the record id as the lookup key.
 import asyncio
 import base64
 import json
-import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from .base import BaseEvaluator, register_evaluator
 
@@ -186,6 +185,7 @@ Response: {response}
 # Evaluator
 # ---------------------------------------------------------------------------
 
+
 @register_evaluator("planning")
 class PlanningEvaluator(BaseEvaluator):
     """Production evaluator for planning tasks (Q1/Q2/Q3).
@@ -196,28 +196,8 @@ class PlanningEvaluator(BaseEvaluator):
 
     name = "planning"
 
-    def __init__(
-        self,
-        eval_model: str = "gpt-4o",
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        max_concurrent: int = 50,
-        task_timeout: int = 960,
-        use_cache: bool = True,
-        cache_dir: Optional[str] = None,
-        data_root: Optional[str] = None,
-    ):
-        self.eval_model = eval_model
-        self.api_key = api_key
-        self.base_url = base_url or "https://api.openai.com/v1"
-        self.max_concurrent = max_concurrent
-        self.task_timeout = task_timeout
-        self.use_cache = use_cache
-        self.cache_dir = cache_dir
-        default_data_root = Path(__file__).resolve().parents[3] / "data"
-        self.data_root = data_root or os.environ.get("ROBOBENCH_DATA_ROOT", str(default_data_root))
-        # Caches for benchmark data (loaded on demand)
-        self._benchmark_cache: Dict[str, Dict] = {}
+    def __init__(self):
+        self._dag_cache: Dict[str, Dict[str, Any]] = {}
 
     def evaluate(
         self, results: List[Dict[str, Any]], config: Optional[Dict[str, Any]] = None
@@ -226,39 +206,25 @@ class PlanningEvaluator(BaseEvaluator):
 
         Args:
             results: List of result dicts with 'response', 'gt_answer', 'id'
-            config: Optional config with 'eval_model', 'use_cache', 'skip_steps',
-                    'data_root'
+            config: Evaluator model, API, dataset root, and output configuration
 
         Returns:
             Dictionary with Q1/Q2/Q3 scores and overall statistics
         """
-        if config:
-            self.eval_model = config.get("eval_model", self.eval_model)
-            self.use_cache = config.get("use_cache", self.use_cache)
-            self.data_root = config.get("data_root", self.data_root)
-            self._batch_save_prefix = config.get(
-                "batch_save_prefix", getattr(self, "_batch_save_prefix", "results")
-            )
-            skip_steps = config.get("skip_steps", [])
-        else:
-            skip_steps = []
+        if config is None:
+            raise ValueError("Planning evaluation requires an explicit configuration")
+        self.eval_model = config["eval_model"]
+        self.data_root = Path(config["data_root"])
+        self.api_config = config["api"]
+        self._batch_save_prefix = config["batch_save_prefix"]
 
         # Step 1: Classify into Q1/Q2/Q3
         classified = self._classify_records(results)
 
         # Step 2: Evaluate each type
-        q1_scores = {}
-        q2_scores = {}
-        q3_scores = {}
-
-        if "q1_extract" not in skip_steps and "q1_dag" not in skip_steps:
-            q1_scores = asyncio.run(self._evaluate_q1(classified.get("q1", [])))
-
-        if "q2" not in skip_steps:
-            q2_scores = asyncio.run(self._evaluate_q2(classified.get("q2", [])))
-
-        if "q3" not in skip_steps:
-            q3_scores = asyncio.run(self._evaluate_q3(classified.get("q3", [])))
+        q1_scores = asyncio.run(self._evaluate_q1(classified["q1"]))
+        q2_scores = asyncio.run(self._evaluate_q2(classified["q2"]))
+        q3_scores = asyncio.run(self._evaluate_q3(classified["q3"]))
 
         # Step 3: Calculate overall statistics
         overall = self._calculate_overall(q1_scores, q2_scores, q3_scores)
@@ -280,11 +246,11 @@ class PlanningEvaluator(BaseEvaluator):
         classified = {"q1": [], "q2": [], "q3": []}
 
         for record in results:
-            if not record or not isinstance(record, dict):
-                continue
+            if not isinstance(record, dict):
+                raise TypeError("Planning results must contain dictionaries")
 
-            task_id = record.get("id", record.get("request_id", ""))
-            gt_answer = record.get("gt_answer", "")
+            task_id = record["request_id"]
+            gt_answer = record["gt_answer"]
 
             # Classify by ID suffix
             if "_Q1" in task_id:
@@ -306,8 +272,7 @@ class PlanningEvaluator(BaseEvaluator):
 
     def _batch_save_path(self, stage: str) -> str:
         """Return a stage-specific temp-result prefix for AsyncModelClient."""
-        prefix = getattr(self, "_batch_save_prefix", "results")
-        return f"{prefix}_{stage}"
+        return f"{self._batch_save_prefix}_{stage}"
 
     @staticmethod
     def _is_yes_no(answer: str) -> bool:
@@ -335,103 +300,24 @@ class PlanningEvaluator(BaseEvaluator):
         if "images" in parts:
             img_idx = parts.index("images")
             return "/".join(parts[:img_idx])
-        # Fallback: first 3 parts
-        return "/".join(parts[:3]) if len(parts) >= 3 else ""
+        raise ValueError(f"Record id does not contain an images component: {record_id}")
 
-    def _load_benchmark_data(self, benchmark: str) -> Dict[str, Any]:
-        """Load questions.json and dag.json for a benchmark. Cached."""
-        if benchmark in self._benchmark_cache:
-            return self._benchmark_cache[benchmark]
+    def _find_dag(self, record: Dict[str, Any]) -> str:
+        """Load the released DAG for a Q1 record."""
+        raw_question = record["raw_question"]
+        if raw_question["task_type"][-1] == "navigation":
+            return "Not applicable for navigation tasks."
 
-        base = Path(self.data_root) / "RoboBench-hf" / benchmark
-        questions_path = base / "questions.json"
-        dag_path = base / "dag.json"
-
-        questions_map = {}
-        dag_map = {}
-
-        if questions_path.exists():
-            with open(questions_path, "r", encoding="utf-8") as f:
-                questions = json.load(f)
-            questions_map = {q["unique_id"]: q for q in questions}
-
-        if dag_path.exists():
+        record_id = record["request_id"]
+        benchmark = self._get_benchmark_path(record_id)
+        if benchmark not in self._dag_cache:
+            dag_path = self.data_root / benchmark / "dag.json"
             with open(dag_path, "r", encoding="utf-8") as f:
-                dag_data = json.load(f)
-            dag_map = {d["id"]: d for d in dag_data}
+                dag_records = json.load(f)
+            self._dag_cache[benchmark] = {item["id"]: item["gt_dag"] for item in dag_records}
 
-        data = {"questions_map": questions_map, "dag_map": dag_map}
-        self._benchmark_cache[benchmark] = data
-        return data
-
-    def _resolve_image_path(self, image_url: str) -> Optional[str]:
-        """Resolve image path from middle_file URL to NAS path."""
-        # Handle old prefix → new prefix replacement
-        old_prefix = "/share/project/test/robobench/robobench"
-        if image_url.startswith(old_prefix):
-            rel = image_url[len(old_prefix):].lstrip("/")
-            new_path = Path(self.data_root) / rel
-            if new_path.exists():
-                return str(new_path)
-        # Direct path
-        p = Path(image_url)
-        if p.exists():
-            return str(p)
-        # Try under data_root
-        alt = Path(self.data_root) / image_url.lstrip("/")
-        if alt.exists():
-            return str(alt)
-        return None
-
-    def _find_image_for_record(self, record_id: str) -> Optional[str]:
-        """Find the first-frame image for a record."""
-        # Try to find via benchmark data
-        benchmark = self._get_benchmark_path(record_id)
-        data = self._load_benchmark_data(benchmark)
-        q = data["questions_map"].get(record_id)
-        if q:
-            image_urls = q.get("image_urls", [])
-            for url in image_urls:
-                resolved = self._resolve_image_path(url)
-                if resolved:
-                    return resolved
-        # Fallback: infer from id
-        img_dir = record_id.rsplit("_", 1)[0]  # remove _Q1 suffix
-        full = Path(self.data_root) / "RoboBench-hf" / img_dir
-        if full.exists():
-            for f in sorted(full.iterdir()):
-                if f.suffix in (".png", ".jpg", ".jpeg"):
-                    return str(f)
-        return None
-
-    def _find_gt_answer(self, record_id: str) -> Optional[str]:
-        """Find ground-truth answer for a record."""
-        benchmark = self._get_benchmark_path(record_id)
-        data = self._load_benchmark_data(benchmark)
-        q = data["questions_map"].get(record_id)
-        if q:
-            return q.get("gt_answer")
-        return None
-
-    def _find_question(self, record_id: str) -> Optional[str]:
-        """Find question text for a record."""
-        benchmark = self._get_benchmark_path(record_id)
-        data = self._load_benchmark_data(benchmark)
-        q = data["questions_map"].get(record_id)
-        if q:
-            return q.get("question")
-        return None
-
-    def _find_dag(self, record_id: str) -> str:
-        """Find DAG JSON string for a record."""
-        benchmark = self._get_benchmark_path(record_id)
-        data = self._load_benchmark_data(benchmark)
-        # dag id is record_id without _Q1/_Q2/_Q3 suffix
-        dag_id = record_id.rsplit("_", 1)[0] if "_" in record_id else record_id
-        entry = data["dag_map"].get(dag_id)
-        if entry:
-            return json.dumps(entry.get("gt_dag", {}), indent=2)
-        return ""
+        dag_id = record_id.removesuffix("_Q1")
+        return json.dumps(self._dag_cache[benchmark][dag_id], indent=2)
 
     # ------------------------------------------------------------------
     # Q1 Evaluation (final v3)
@@ -447,41 +333,33 @@ class PlanningEvaluator(BaseEvaluator):
         # Build evaluation tasks with enriched data
         tasks = []
         for record in records:
-            record_id = record.get("id", "")
-            gt_answer = self._find_gt_answer(record_id)
-            question = self._find_question(record_id)
-            image_path = self._find_image_for_record(record_id)
-            dag_info = self._find_dag(record_id)
-            model_response = record.get("response", "")
+            record_id = record["request_id"]
+            raw_question = record["raw_question"]
+            image_path = Path(raw_question["image_urls"][0])
+            if not image_path.is_file():
+                raise FileNotFoundError(f"Planning image not found: {image_path}")
 
-            if not gt_answer:
-                print(f"[WARN] No GT found for {record_id}, skipping")
-                continue
-
-            tasks.append({
-                "id": record_id,
-                "gt_answer": gt_answer,
-                "model_response": model_response,
-                "question": question or "",
-                "image_path": image_path,
-                "dag_info": dag_info,
-            })
-
-        if not tasks:
-            return {"count": len(records), "mean_score": 0, "scores": []}
+            tasks.append(
+                {
+                    "id": record_id,
+                    "gt_answer": record["gt_answer"],
+                    "model_response": record["response"] or "",
+                    "question": raw_question["question"],
+                    "image_path": str(image_path),
+                    "dag_info": self._find_dag(record),
+                }
+            )
 
         # Build API messages
         batch_requests = []
         for task in tasks:
             msgs = self._build_q1_messages(task)
-            if msgs:
-                batch_requests.append({
+            batch_requests.append(
+                {
                     "request_id": task["id"],
                     "messages": msgs,
-                })
-
-        if not batch_requests:
-            return {"count": len(tasks), "mean_score": 0, "scores": []}
+                }
+            )
 
         # Call API
         client = AsyncModelClient(self._api_config())
@@ -494,34 +372,37 @@ class PlanningEvaluator(BaseEvaluator):
         # Parse scores
         scores = []
         score_details = []
-        response_map = {r["id"]: r for r in responses if r and r.get("id")}
+        response_map = {response["id"]: response for response in responses}
 
         for task in tasks:
-            resp = response_map.get(task["id"], {})
-            raw_resp = resp.get("response", "") if resp else ""
+            raw_resp = response_map[task["id"]]["response"] or ""
             parsed = self._parse_q1_score(raw_resp)
 
             if parsed is not None:
-                node_score = parsed.get("node_correctness", 0)
-                comp_score = parsed.get("task_completion", 0)
+                node_score = parsed["node_correctness"]
+                comp_score = parsed["task_completion"]
                 combined = (node_score + comp_score) / 20.0 * 100.0
                 scores.append(combined)
-                score_details.append({
-                    "id": task["id"],
-                    "node_correctness": node_score,
-                    "task_completion": comp_score,
-                    "combined": combined,
-                    "raw_response": raw_resp,
-                })
+                score_details.append(
+                    {
+                        "id": task["id"],
+                        "node_correctness": node_score,
+                        "task_completion": comp_score,
+                        "combined": combined,
+                        "raw_response": raw_resp,
+                    }
+                )
             else:
-                score_details.append({
-                    "id": task["id"],
-                    "node_correctness": None,
-                    "task_completion": None,
-                    "combined": None,
-                    "raw_response": raw_resp,
-                    "parse_error": True,
-                })
+                score_details.append(
+                    {
+                        "id": task["id"],
+                        "node_correctness": None,
+                        "task_completion": None,
+                        "combined": None,
+                        "raw_response": raw_resp,
+                        "parse_error": True,
+                    }
+                )
 
         valid_scores = [s for s in scores if s is not None]
         mean_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0
@@ -534,41 +415,30 @@ class PlanningEvaluator(BaseEvaluator):
             "parse_failures": len(tasks) - len(valid_scores),
         }
 
-    def _build_q1_messages(self, task: Dict[str, Any]) -> Optional[List[Dict]]:
+    def _build_q1_messages(self, task: Dict[str, Any]) -> List[Dict]:
         """Build evaluation messages for Q1 (final v3 style)."""
-        image_path = task.get("image_path")
-        if not image_path:
-            print(f"[WARN] No image for {task['id']}, evaluating without image")
-            # Fall through: evaluate without image (still valid, just less accurate)
-
-        # Load image
-        img_b64 = None
+        image_path = task["image_path"]
         media_type = "image/jpeg"
-        if image_path:
-            try:
-                with open(image_path, "rb") as f:
-                    img_data = f.read()
-                img_b64 = base64.b64encode(img_data).decode()
-                # Detect media type from header
-                if img_data[:3] == b"\xff\xd8\xff":
-                    media_type = "image/jpeg"
-                elif img_data[:8] == b"\x89PNG\r\n\x1a\n":
-                    media_type = "image/png"
-            except Exception as e:
-                print(f"[WARN] Failed to load image {image_path}: {e}")
+        with open(image_path, "rb") as f:
+            img_data = f.read()
+        img_b64 = base64.b64encode(img_data).decode()
+        if img_data[:3] == b"\xff\xd8\xff":
+            media_type = "image/jpeg"
+        elif img_data[:8] == b"\x89PNG\r\n\x1a\n":
+            media_type = "image/png"
 
         # Build evaluation text
         eval_text = f"""Task Instruction:
-{task.get('question') or '(Not available)'}
+{task["question"]}
 
 Ground Truth Action List:
-{task['gt_answer']}
+{task["gt_answer"]}
 
 GT DAG Dependencies:
-{task.get('dag_info') or '(Not available)'}
+{task["dag_info"]}
 
 Model Plan Action List:
-{task['model_response']}
+{task["model_response"]}
 
 Evaluate the model plan. Output JSON only."""
 
@@ -582,25 +452,21 @@ Evaluate the model plan. Output JSON only."""
 
         if is_claude:
             # Claude: put prompt in user message, no system role with images
-            return [{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": PROMPT_V3 + "\n\n" + eval_text},
-                    img_content,
-                ],
-            }]
+            return [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": PROMPT_V3 + "\n\n" + eval_text},
+                        img_content,
+                    ],
+                }
+            ]
         else:
             # OpenAI / Gemini: system prompt + user content [image, text]
-            if img_b64:
-                return [
-                    {"role": "system", "content": PROMPT_V3},
-                    {"role": "user", "content": [img_content, text_content]},
-                ]
-            else:
-                return [
-                    {"role": "system", "content": PROMPT_V3},
-                    {"role": "user", "content": eval_text},
-                ]
+            return [
+                {"role": "system", "content": PROMPT_V3},
+                {"role": "user", "content": [img_content, text_content]},
+            ]
 
     @staticmethod
     def _parse_q1_score(response: str) -> Optional[Dict[str, int]]:
@@ -615,19 +481,18 @@ Evaluate the model plan. Output JSON only."""
             cleaned = re.sub(r"\s*```\s*$", "", cleaned)
 
         # Find JSON object
-        m = re.search(r'\{[\s\S]*\}', cleaned)
+        m = re.search(r"\{[\s\S]*\}", cleaned)
         if not m:
             return None
 
         try:
             data = json.loads(m.group())
-        except json.JSONDecodeError:
+            nc = data["node_correctness"]
+            cc = data["task_completion"]
+            n_score = nc["result"]
+            c_score = cc["result"]
+        except (json.JSONDecodeError, KeyError, TypeError):
             return None
-
-        nc = data.get("node_correctness", {})
-        cc = data.get("task_completion", {})
-        n_score = nc.get("result") if isinstance(nc, dict) else None
-        c_score = cc.get("result") if isinstance(cc, dict) else None
 
         def to_0_10_int(value):
             if value is None:
@@ -667,12 +532,14 @@ Evaluate the model plan. Output JSON only."""
         # Step 1: Extract steps
         extract_prompts = []
         for record in records:
-            prompt_text = PROMPT_TEMPLATE_EXTRACT_STEP.format(response=record.get("response", ""))
-            extract_prompts.append({
-                "id": record.get("id", ""),
-                "prompt": prompt_text,
-                "record": record,
-            })
+            prompt_text = PROMPT_TEMPLATE_EXTRACT_STEP.format(response=record["response"] or "")
+            extract_prompts.append(
+                {
+                    "id": record["request_id"],
+                    "prompt": prompt_text,
+                    "record": record,
+                }
+            )
 
         client = AsyncModelClient(self._api_config())
         messages = []
@@ -689,25 +556,26 @@ Evaluate the model plan. Output JSON only."""
 
         # Step 2: Compare steps
         compare_prompts = []
-        valid_tasks = []
         for i, record in enumerate(records):
-            extract_result = extract_results[i] if i < len(extract_results) else None
-            if not extract_result or not extract_result.get("response"):
+            extract_result = extract_results[i]
+            if not extract_result["response"]:
                 continue
 
             extracted_step = extract_result["response"].strip()
-            gt_step = record.get("gt_answer", "").split("-")[-1]
+            gt_step = record["gt_answer"].split("-")[-1]
 
             prompt_text = PROMPT_TEMPLATE_COMPARE_STEPS.format(
                 extracted_step=extracted_step,
                 gt_step=gt_step,
             )
-            compare_prompts.append({
-                "id": record.get("id", ""),
-                "prompt": prompt_text,
-                "extracted_step": extracted_step,
-                "gt_step": gt_step,
-            })
+            compare_prompts.append(
+                {
+                    "id": record["request_id"],
+                    "prompt": prompt_text,
+                    "extracted_step": extracted_step,
+                    "gt_step": gt_step,
+                }
+            )
 
         if compare_prompts:
             messages = []
@@ -728,25 +596,27 @@ Evaluate the model plan. Output JSON only."""
         scores = []
         score_details = []
         for i, p in enumerate(compare_prompts):
-            result = compare_results[i] if i < len(compare_results) else None
-            parsed = self._parse_q2_score(result.get("response", "") if result else "")
+            result = compare_results[i]
+            parsed = self._parse_q2_score(result["response"] or "")
 
             if parsed is not None:
-                skill = parsed.get("skill_usage_accuracy", 0)
-                obj = parsed.get("operation_object_reasonableness", 0)
-                param = parsed.get("parameter_accuracy", 0)
+                skill = parsed["skill_usage_accuracy"]
+                obj = parsed["operation_object_reasonableness"]
+                param = parsed["parameter_accuracy"]
                 # Dependency rule
                 if skill == 0 or obj == 0:
                     param = 0
                 score = (skill + obj + param) / 3.0 * 100.0
                 scores.append(score)
-                score_details.append({
-                    "id": p["id"],
-                    "skill": skill,
-                    "object": obj,
-                    "parameter": param,
-                    "score": score,
-                })
+                score_details.append(
+                    {
+                        "id": p["id"],
+                        "skill": skill,
+                        "object": obj,
+                        "parameter": param,
+                        "score": score,
+                    }
+                )
             else:
                 score_details.append({"id": p["id"], "score": None, "parse_error": True})
 
@@ -772,15 +642,15 @@ Evaluate the model plan. Output JSON only."""
             cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
             cleaned = re.sub(r"\s*```\s*$", "", cleaned)
 
-        m = re.search(r'\{[\s\S]*\}', cleaned)
+        m = re.search(r"\{[\s\S]*\}", cleaned)
         if not m:
             return None
 
         try:
             data = json.loads(m.group())
-            skill = data.get("skill_usage_accuracy", {}).get("result")
-            obj = data.get("operation_object_reasonableness", {}).get("result")
-            param = data.get("parameter_accuracy", {}).get("result")
+            skill = data["skill_usage_accuracy"]["result"]
+            obj = data["operation_object_reasonableness"]["result"]
+            param = data["parameter_accuracy"]["result"]
 
             # Validate types and ranges
             def to_float(v):
@@ -792,12 +662,17 @@ Evaluate the model plan. Output JSON only."""
                 except (ValueError, TypeError):
                     return None
 
+            skill = to_float(skill)
+            obj = to_float(obj)
+            param = to_float(param)
+            if skill is None or obj is None or param is None:
+                return None
             return {
-                "skill_usage_accuracy": to_float(skill),
-                "operation_object_reasonableness": to_float(obj),
-                "parameter_accuracy": to_float(param),
+                "skill_usage_accuracy": skill,
+                "operation_object_reasonableness": obj,
+                "parameter_accuracy": param,
             }
-        except Exception:
+        except (json.JSONDecodeError, KeyError, TypeError):
             return None
 
     # ------------------------------------------------------------------
@@ -813,14 +688,14 @@ Evaluate the model plan. Output JSON only."""
 
         prompts = []
         for record in records:
-            prompt_text = PROMPT_TEMPLATE_EXTRACT_YES_NO.format(
-                response=record.get("response", "")
+            prompt_text = PROMPT_TEMPLATE_EXTRACT_YES_NO.format(response=record["response"] or "")
+            prompts.append(
+                {
+                    "id": record["request_id"],
+                    "prompt": prompt_text,
+                    "gt_answer": record["gt_answer"].lower().strip(),
+                }
             )
-            prompts.append({
-                "id": record.get("id", ""),
-                "prompt": prompt_text,
-                "gt_answer": record.get("gt_answer", "").lower().strip(),
-            })
 
         client = AsyncModelClient(self._api_config())
         messages = []
@@ -838,8 +713,8 @@ Evaluate the model plan. Output JSON only."""
         scores = []
         score_details = []
         for i, p in enumerate(prompts):
-            result = results[i] if i < len(results) else None
-            if result and result.get("response"):
+            result = results[i]
+            if result["response"]:
                 extracted = result["response"].strip().lower()
                 is_correct = extracted == p["gt_answer"]
                 score = 100.0 if is_correct else 0.0
@@ -847,13 +722,15 @@ Evaluate the model plan. Output JSON only."""
                 is_correct = False
                 score = 0.0
             scores.append(score)
-            score_details.append({
-                "id": p["id"],
-                "extracted": extracted if result and result.get("response") else None,
-                "gt": p["gt_answer"],
-                "correct": is_correct,
-                "score": score,
-            })
+            score_details.append(
+                {
+                    "id": p["id"],
+                    "extracted": extracted if result["response"] else None,
+                    "gt": p["gt_answer"],
+                    "correct": is_correct,
+                    "score": score,
+                }
+            )
 
         mean_score = sum(scores) / len(scores) if scores else 0
 
@@ -875,18 +752,14 @@ Evaluate the model plan. Output JSON only."""
         q3_scores: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Calculate overall scores across Q1/Q2/Q3."""
-        total_count = (
-            q1_scores.get("count", 0)
-            + q2_scores.get("count", 0)
-            + q3_scores.get("count", 0)
-        )
+        total_count = q1_scores["count"] + q2_scores["count"] + q3_scores["count"]
 
-        q1_mean = q1_scores.get("mean_score", 0)
-        q2_mean = q2_scores.get("mean_score", 0)
-        q3_mean = q3_scores.get("mean_score", 0)
-        q1_count = q1_scores.get("count", 0)
-        q2_count = q2_scores.get("count", 0)
-        q3_count = q3_scores.get("count", 0)
+        q1_mean = q1_scores["mean_score"]
+        q2_mean = q2_scores["mean_score"]
+        q3_mean = q3_scores["mean_score"]
+        q1_count = q1_scores["count"]
+        q2_count = q2_scores["count"]
+        q3_count = q3_scores["count"]
 
         if total_count > 0:
             overall_mean = (
@@ -904,20 +777,5 @@ Evaluate the model plan. Output JSON only."""
         }
 
     def _api_config(self):
-        """Create a simple API config object for AsyncModelClient."""
-
-        class SimpleAPIConfig:
-            def __init__(self, base_url, api_key, max_concurrent, task_timeout):
-                self.base_url = base_url
-                self.api_key = api_key
-                self.api_max_concurrent = max_concurrent
-                self.retry_attempts = 10
-                self.task_timeout = task_timeout
-                self.retry_backoff = {"multiplier": 1, "min": 1, "max": 10}
-
-        return SimpleAPIConfig(
-            self.base_url,
-            self.api_key,
-            self.max_concurrent,
-            self.task_timeout,
-        )
+        """Return the benchmark API configuration."""
+        return self.api_config

@@ -8,7 +8,8 @@ The public code release includes the prompt utilities needed to run inference an
 
 | Purpose | Public file |
 | --- | --- |
-| API-ready prompt construction from released question JSONL files | `src/robobench/prompts/builder.py` |
+| Prompt construction from released `questions.json` and `system_prompt.json` | `src/robobench/data/dataset.py` |
+| API-ready multimodal message construction | `src/robobench/prompts/builder.py` |
 | Single-arm video-to-task/step description template | `src/robobench/prompts/robot_types/single_arm.py` |
 | Dual-arm video-to-task/step prompt set | `src/robobench/prompts/robot_types/dual_arm.py` |
 | Mobile-manipulator video-to-task/step template | `src/robobench/prompts/robot_types/mobile_manipulation.py` |
@@ -16,9 +17,13 @@ The public code release includes the prompt utilities needed to run inference an
 | Explicit-to-implicit instruction conversion | `src/robobench/prompts/robot_types/explicit_to_implicit.py` |
 | Shared planning templates and action vocabulary | `src/robobench/prompts/templates/planning.py` |
 | Production Q1 world-simulator judge prompt and Q2/Q3 evaluator prompts | `src/robobench/evaluation/planning.py` |
-| Multiple-choice / open-ended answer normalization prompts | `src/robobench/evaluation/multi_choice.py` |
+| Multiple-choice answer extraction and exact scoring | `src/robobench/evaluation/multi_choice.py` |
 
-For most users, `PromptBuilder` is the main entry point: it reads released question records, resolves image paths, injects optional system prompts, and writes API-ready message payloads.
+For most users, `RoboBenchDataset` is the data entry point. It locates exactly
+one released `questions.json` file for each configured subtask, constructs the
+benchmark prompt from `system_prompt.json`, and resolves local image paths.
+`PromptBuilder` then converts those prepared records into API-ready multimodal
+messages.
 
 ## Paper appendix coverage
 
@@ -57,7 +62,9 @@ RoboBench uses a dimension-specific construction pipeline:
 5. Generate released QA records under the unified RoboBench schema.
 6. Run task-specific quality-control checks before evaluation.
 
-The released dataset already contains the final prompt-ready question records. Therefore, reproducing the benchmark evaluation does not require rerunning the full annotation pipeline.
+The released dataset already contains the final question records and system
+prompts. Reproducing the benchmark evaluation does not require rerunning the
+annotation pipeline or generating a separate prompt-data directory.
 
 ## Evaluation pipeline
 

@@ -18,8 +18,6 @@ Common environment variables:
   ROBOBENCH_CONFIG                Config path (default: config/benchmark.yaml)
   ROBOBENCH_RUN_ID                Run id (default: hy_embodied_run0)
   ROBOBENCH_MAX_SAMPLES           Optional sample cap for debugging
-  ROBOBENCH_HY_MCQ_DIMENSIONS     Default: "perception_reasoning affordance_reasoning error_analysis"
-  ROBOBENCH_HY_PLANNING_DIMENSIONS Default: "instruction_comprehension generalized_planning"
 
 Before running:
   1. pip install -e .
@@ -28,7 +26,8 @@ Before running:
   4. Add your served HY-Embodied model name to config.models.
   5. Start the HY model as an OpenAI-compatible endpoint.
   6. Export ROBOBENCH_API_BASE_URL, DUBRIFY_API_KEY, ROBOBENCH_DATA_ROOT,
-     ROBOBENCH_MIDDLE_FILE_DIR, ROBOBENCH_RESULTS_ROOT, and ROBOBENCH_CACHE_DIR.
+     ROBOBENCH_RESULTS_ROOT, ROBOBENCH_CACHE_DIR, ROBOBENCH_JUDGE_API_BASE_URL,
+     and ROBOBENCH_JUDGE_API_KEY.
 
 Examples:
   ROBOBENCH_MODEL=hy_a3b bash scripts/run_hy_embodied_eval.sh dry-run
@@ -48,8 +47,8 @@ CONFIG="${ROBOBENCH_CONFIG:-config/benchmark.yaml}"
 MODEL="${ROBOBENCH_MODEL:-}"
 RUN_ID="${ROBOBENCH_RUN_ID:-hy_embodied_run0}"
 MAX_SAMPLES="${ROBOBENCH_MAX_SAMPLES:-}"
-MCQ_DIMENSIONS="${ROBOBENCH_HY_MCQ_DIMENSIONS:-perception_reasoning affordance_reasoning error_analysis}"
-PLANNING_DIMENSIONS="${ROBOBENCH_HY_PLANNING_DIMENSIONS:-instruction_comprehension generalized_planning}"
+MCQ_DIMENSIONS=(perception_reasoning affordance_reasoning error_analysis)
+PLANNING_DIMENSIONS=(instruction_comprehension generalized_planning)
 
 case "$MODE" in
   all|mcq|planning|smoke|dry-run) ;;
@@ -85,8 +84,8 @@ import yaml
 
 config_path = Path(sys.argv[1])
 model = sys.argv[2]
-data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-names = [item.get("name") for item in data.get("models", []) if isinstance(item, dict)]
+data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+names = [item["name"] for item in data["models"]]
 if model not in names:
     print(
         f"ERROR: model '{model}' is not listed under models in {config_path}.",
@@ -110,56 +109,66 @@ run_robobench() {
 
 run_dimension() {
   local dimension="$1"
+  local subtask="${2:-}"
   local extra_args=()
   if [[ -n "$MAX_SAMPLES" ]]; then
     extra_args+=(--max-samples "$MAX_SAMPLES")
+  fi
+  if [[ -n "$subtask" ]]; then
+    extra_args+=(--subtask "$subtask")
   fi
 
   echo
   echo "================================================================"
   echo "RoboBench dimension: $dimension | model: ${MODEL:-<set ROBOBENCH_MODEL>} | run: $RUN_ID"
   echo "================================================================"
-  if [[ "$MODE" == "dry-run" ]]; then
-    echo "Would run inference and evaluation for this dimension."
-    return
-  fi
-
   run_robobench --config "$CONFIG" inference \
     --model "$MODEL" \
     --dimension "$dimension" \
     --run-id "$RUN_ID" \
     "${extra_args[@]}"
 
-  run_robobench --config "$CONFIG" evaluate \
-    --dimension "$dimension" \
-    --model "$MODEL" \
+  local evaluate_args=(
+    --dimension "$dimension"
+    --model "$MODEL"
     --run-id "$RUN_ID"
+  )
+  if [[ -n "$subtask" ]]; then
+    evaluate_args+=(--subtask "$subtask")
+  fi
+  run_robobench --config "$CONFIG" evaluate "${evaluate_args[@]}"
 }
 
 run_list() {
-  local dims="$1"
-  for dimension in $dims; do
+  local -a dims=("$@")
+  for dimension in "${dims[@]}"; do
     run_dimension "$dimension"
   done
 }
 
+inspect_list() {
+  local -a dims=("$@")
+  run_robobench --config "$CONFIG" inspect-data \
+    --metadata-only \
+    --dimension "${dims[@]}"
+}
+
 case "$MODE" in
   mcq)
-    run_list "$MCQ_DIMENSIONS"
+    run_list "${MCQ_DIMENSIONS[@]}"
     ;;
   planning)
-    run_list "$PLANNING_DIMENSIONS"
+    run_list "${PLANNING_DIMENSIONS[@]}"
     ;;
   smoke)
-    run_dimension "$(printf '%s\n' $MCQ_DIMENSIONS | head -n 1)"
-    run_dimension "$(printf '%s\n' $PLANNING_DIMENSIONS | head -n 1)"
+    run_dimension perception_reasoning static_attribute
+    run_dimension instruction_comprehension explicit_object_goal
     ;;
   dry-run)
-    run_list "$MCQ_DIMENSIONS"
-    run_list "$PLANNING_DIMENSIONS"
+    inspect_list "${MCQ_DIMENSIONS[@]}" "${PLANNING_DIMENSIONS[@]}"
     ;;
   all)
-    run_list "$MCQ_DIMENSIONS"
-    run_list "$PLANNING_DIMENSIONS"
+    run_list "${MCQ_DIMENSIONS[@]}"
+    run_list "${PLANNING_DIMENSIONS[@]}"
     ;;
 esac

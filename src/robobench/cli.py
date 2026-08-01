@@ -8,7 +8,6 @@ Entry points:
 """
 
 import argparse
-import asyncio
 import json
 import sys
 from pathlib import Path
@@ -38,6 +37,12 @@ def _raw_path_matches_dimension(raw_path: Path, dimension: str) -> bool:
     return task_label == dimension or task_label.startswith(f"{dimension}_")
 
 
+def _raw_path_matches_subtask(raw_path: Path, dimension: str, subtask: str | None) -> bool:
+    if subtask is None:
+        return True
+    return raw_path.parent.name == f"{dimension}_{subtask}"
+
+
 def _safe_label(value: str) -> str:
     return value.replace("/", "_").replace("-", "_")
 
@@ -52,81 +57,134 @@ def _raw_path_matches_model(raw_path: Path, models: list[str]) -> bool:
 
 
 def _raw_path_matches_run(raw_path: Path, results_dir: Path, run_id: str | None) -> bool:
-    if not run_id:
+    if run_id is None:
         return True
-    try:
-        relative = raw_path.relative_to(results_dir)
-    except ValueError:
+    if not raw_path.is_relative_to(results_dir):
         return False
+    relative = raw_path.relative_to(results_dir)
     return bool(relative.parts) and relative.parts[0] == run_id
+
+
+def _select_dimensions(config: BenchmarkConfig, requested: list[str] | None):
+    dimensions = config.get_enabled_dimensions()
+    if requested is None:
+        return dimensions
+    unknown = sorted(set(requested) - set(dimensions))
+    if unknown:
+        raise ValueError(f"Unknown or disabled dimensions: {', '.join(unknown)}")
+    return {name: dimensions[name] for name in requested}
+
+
+def _select_models(config: BenchmarkConfig, requested: list[str] | None) -> list[str]:
+    models = config.get_model_names()
+    if requested is None:
+        return models
+    unknown = sorted(set(requested) - set(models))
+    if unknown:
+        raise ValueError(f"Models are not configured: {', '.join(unknown)}")
+    return requested
+
+
+def _select_subtasks(dimension: str, configured: list[str], requested: str | None) -> list[str]:
+    if requested is None:
+        return configured
+    if requested not in configured:
+        raise ValueError(f"Unknown subtask '{requested}' for dimension '{dimension}'")
+    return [requested]
+
+
+def cmd_inspect_data(args):
+    """Validate released questions, prompts, and image paths."""
+    from robobench.data.dataset import RoboBenchDataset
+
+    config = _load_config(args)
+    dimensions = _select_dimensions(config, args.dimension)
+    if args.subtask is not None and len(dimensions) != 1:
+        raise ValueError("--subtask requires exactly one --dimension")
+
+    dataset = RoboBenchDataset(config.paths.data_root)
+    total_questions = 0
+    total_images = 0
+    print(f"Dataset root: {config.paths.data_root}")
+
+    for dimension, dimension_config in dimensions.items():
+        subtasks = _select_subtasks(dimension, dimension_config.subtasks, args.subtask)
+        for subtask in subtasks:
+            questions = dataset.load_questions(dimension, subtask)
+            image_paths = [Path(path) for question in questions for path in question["image_urls"]]
+            if not args.metadata_only:
+                missing_images = [path for path in image_paths if not path.is_file()]
+                if missing_images:
+                    raise FileNotFoundError(
+                        f"Missing {len(missing_images)} images for {dimension}/{subtask}; "
+                        f"first missing path: {missing_images[0]}"
+                    )
+            print(f"  {dimension}/{subtask}: questions={len(questions)} images={len(image_paths)}")
+            total_questions += len(questions)
+            total_images += len(image_paths)
+
+    print(f"Validated: questions={total_questions} images={total_images}")
 
 
 def cmd_inference(args):
     """Run inference for specified models and dimensions."""
     config = _load_config(args)
-    run_id = args.run_id or "run_0"
+    run_id = args.run_id
     context = RunContext(run_id=run_id, config=config, seed=config.get_seed(0))
 
-    dimensions = config.get_enabled_dimensions()
-    models = config.get_model_names()
+    dimensions = _select_dimensions(config, args.dimension)
+    models = _select_models(config, args.model)
+    if args.subtask is not None and len(dimensions) != 1:
+        raise ValueError("--subtask requires exactly one --dimension")
 
-    if args.model:
-        models = [m for m in models if m in args.model]
-    if args.dimension:
-        dimensions = {k: v for k, v in dimensions.items() if k in args.dimension}
-
-    print(f"Inference: {len(models)} models x {len(dimensions)} dimensions")
+    task_count = sum(
+        len(_select_subtasks(dim_name, dim_config.subtasks, args.subtask))
+        for dim_name, dim_config in dimensions.items()
+    )
+    print(f"Inference: {len(models)} models x {task_count} subtasks")
 
     for dim_name, dim_config in dimensions.items():
-        for model_name in models:
-            print(f"\n{'=' * 60}")
-            print(f"Dimension: {dim_name} | Model: {model_name}")
-            print(f"{'=' * 60}")
+        subtasks = _select_subtasks(dim_name, dim_config.subtasks, args.subtask)
+        for subtask in subtasks:
+            for model_name in models:
+                print(f"\n{'=' * 60}")
+                print(f"Dimension: {dim_name} | Subtask: {subtask} | Model: {model_name}")
+                print(f"{'=' * 60}")
 
-            executor = PipelineExecutor(context)
-            executor.add_node(LoadDatasetNode)
-            executor.add_node(BuildPromptsNode)
-            executor.add_node(RunInferenceNode)
+                executor = PipelineExecutor(context)
+                executor.add_node(LoadDatasetNode)
+                executor.add_node(BuildPromptsNode)
+                executor.add_node(RunInferenceNode)
 
-            initial = {
-                "dimension": dim_name,
-                "subtask": args.subtask or "",
-                "dimension_config": dim_config,
-                "model_name": model_name,
-                "vision": not args.text_only,
-                "max_samples": args.max_samples,
-            }
-            executor.run(initial)
+                initial = {
+                    "dimension": dim_name,
+                    "subtask": subtask,
+                    "model_name": model_name,
+                    "vision": not args.text_only,
+                    "max_samples": args.max_samples,
+                }
+                executor.run(initial)
 
 
 def cmd_evaluate(args):
     """Run evaluation on existing results."""
     config = _load_config(args)
-    dimensions = config.get_enabled_dimensions()
-
-    if args.dimension:
-        dimensions = {k: v for k, v in dimensions.items() if k in args.dimension}
+    dimensions = _select_dimensions(config, args.dimension)
+    if args.subtask is not None and len(dimensions) != 1:
+        raise ValueError("--subtask requires exactly one --dimension")
 
     for dim_name, dim_config in dimensions.items():
+        _select_subtasks(dim_name, dim_config.subtasks, args.subtask)
         print(f"\nEvaluating: {dim_name} ({dim_config.eval_type})")
 
         eval_type = dim_config.eval_type
-        eval_config = config.evaluation
-
-        # Determine evaluator-specific config
-        if eval_type == "planning":
-            eval_cfg = eval_config.planning.model_dump()
-        elif eval_type == "multi_choice":
-            eval_cfg = eval_config.multi_choice.model_dump()
-        else:
-            eval_cfg = {}
-
         # Find result files for this dimension.
         results_dir = Path(config.paths.results_root)
         raw_paths = [
             path
             for path in sorted(results_dir.rglob("raw.json"))
             if _raw_path_matches_dimension(path, dim_name)
+            and _raw_path_matches_subtask(path, dim_name, args.subtask)
             and _raw_path_matches_model(path, args.model or [])
             and _raw_path_matches_run(path, results_dir, args.run_id)
         ]
@@ -143,7 +201,6 @@ def cmd_evaluate(args):
             inputs = {
                 "raw_responses": str(raw_path),
                 "eval_type": eval_type,
-                "eval_config": eval_cfg,
             }
             executor.run(inputs)
 
@@ -151,7 +208,7 @@ def cmd_evaluate(args):
 def cmd_pipeline(args):
     """Run full benchmark pipeline end-to-end."""
     config = _load_config(args)
-    repeats = args.repeats or config.runs.num_repeats
+    repeats = args.repeats if args.repeats is not None else config.runs.num_repeats
 
     if args.dry_run:
         executor = PipelineExecutor(RunContext(run_id="dry_run", config=config))
@@ -181,34 +238,28 @@ def cmd_pipeline(args):
         models = config.get_model_names()
 
         for dim_name, dim_config in dimensions.items():
-            for model_name in models:
-                print(f"\n[{dim_name}] [{model_name}]")
+            subtasks = _select_subtasks(dim_name, dim_config.subtasks, args.subtask)
+            for subtask in subtasks:
+                for model_name in models:
+                    print(f"\n[{dim_name}] [{subtask}] [{model_name}]")
 
-                executor = PipelineExecutor(context)
-                executor.add_node(LoadDatasetNode)
-                executor.add_node(BuildPromptsNode)
-                executor.add_node(RunInferenceNode)
-                executor.add_node(EvaluateNode)
+                    executor = PipelineExecutor(context)
+                    executor.add_node(LoadDatasetNode)
+                    executor.add_node(BuildPromptsNode)
+                    executor.add_node(RunInferenceNode)
+                    executor.add_node(EvaluateNode)
 
-                eval_type = dim_config.eval_type
-                if eval_type == "planning":
-                    eval_cfg = config.evaluation.planning.model_dump()
-                elif eval_type == "multi_choice":
-                    eval_cfg = config.evaluation.multi_choice.model_dump()
-                else:
-                    eval_cfg = {}
+                    eval_type = dim_config.eval_type
 
-                initial = {
-                    "dimension": dim_name,
-                    "subtask": args.subtask or "",
-                    "dimension_config": dim_config,
-                    "model_name": model_name,
-                    "vision": True,
-                    "eval_type": eval_type,
-                    "eval_config": eval_cfg,
-                    "max_samples": args.max_samples,
-                }
-                executor.run(initial)
+                    initial = {
+                        "dimension": dim_name,
+                        "subtask": subtask,
+                        "model_name": model_name,
+                        "vision": True,
+                        "eval_type": eval_type,
+                        "max_samples": args.max_samples,
+                    }
+                    executor.run(initial)
 
     # Aggregate scores across runs
     if repeats > 1:
@@ -240,7 +291,7 @@ def cmd_pipeline(args):
 
 def cmd_report(args):
     """Generate reports from existing results."""
-    config = _load_config(args)
+    _load_config(args)
     print("Report generation: TODO")
 
 
@@ -254,34 +305,40 @@ def main():
         default="config/benchmark.yaml",
         help="Path to benchmark configuration YAML file",
     )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    p_inspect = subparsers.add_parser(
+        "inspect-data", help="Validate released questions and image files"
+    )
+    p_inspect.add_argument("--dimension", nargs="+", help="Specific dimensions to inspect")
+    p_inspect.add_argument("--subtask", help="Specific subtask to inspect")
+    p_inspect.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="Validate question metadata without checking downloaded image files",
+    )
 
     # inference command
     p_inference = subparsers.add_parser("inference", help="Run model inference")
     p_inference.add_argument("--model", nargs="+", help="Specific models to run")
-    p_inference.add_argument(
-        "--dimension", nargs="+", help="Specific dimensions to run"
-    )
-    p_inference.add_argument("--subtask", help="Specific subtask name/file fragment to run")
+    p_inference.add_argument("--dimension", nargs="+", help="Specific dimensions to run")
+    p_inference.add_argument("--subtask", help="Specific configured subtask to run")
     p_inference.add_argument(
         "--max-samples",
         type=int,
-        help="Maximum number of questions to load per selected dimension",
+        help="Maximum number of questions to load per selected subtask",
     )
-    p_inference.add_argument("--run-id", help="Run identifier")
+    p_inference.add_argument("--run-id", default="run_0", help="Run identifier")
     p_inference.add_argument(
         "--text-only", action="store_true", help="Run without vision (text-only ablation)"
     )
 
     # evaluate command
     p_evaluate = subparsers.add_parser("evaluate", help="Evaluate model responses")
-    p_evaluate.add_argument(
-        "--dimension", nargs="+", help="Specific dimensions to evaluate"
-    )
+    p_evaluate.add_argument("--dimension", nargs="+", help="Specific dimensions to evaluate")
+    p_evaluate.add_argument("--subtask", help="Specific configured subtask to evaluate")
     p_evaluate.add_argument("--model", nargs="+", help="Specific models to evaluate")
     p_evaluate.add_argument("--run-id", help="Specific run identifier to evaluate")
 
@@ -290,11 +347,11 @@ def main():
     p_pipeline.add_argument(
         "--repeats", type=int, help="Number of repeated runs (overrides config)"
     )
-    p_pipeline.add_argument("--subtask", help="Specific subtask name/file fragment to run")
+    p_pipeline.add_argument("--subtask", help="Specific configured subtask to run")
     p_pipeline.add_argument(
         "--max-samples",
         type=int,
-        help="Maximum number of questions to load per selected dimension",
+        help="Maximum number of questions to load per selected subtask",
     )
     p_pipeline.add_argument(
         "--dry-run", action="store_true", help="Show pipeline graph without executing"
@@ -302,9 +359,7 @@ def main():
 
     # report command
     p_report = subparsers.add_parser("report", help="Generate reports")
-    p_report.add_argument(
-        "--output", "-o", default=".", help="Output directory for reports"
-    )
+    p_report.add_argument("--output", "-o", default=".", help="Output directory for reports")
 
     args = parser.parse_args()
 
@@ -312,7 +367,9 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    if args.command == "inference":
+    if args.command == "inspect-data":
+        cmd_inspect_data(args)
+    elif args.command == "inference":
         cmd_inference(args)
     elif args.command == "evaluate":
         cmd_evaluate(args)
