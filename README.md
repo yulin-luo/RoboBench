@@ -1,3 +1,5 @@
+
+
 <h1 align="center">🤖 RoboBench</h1>
 
 <p align="center">
@@ -36,7 +38,7 @@
 
 ## 🔍 Overview
 
-RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied intelligence into diagnostic abilities rather than reporting only end-to-end task success. It covers the full execution pipeline from instruction comprehension and perception to generalized planning, affordance reasoning, and failure analysis. The ECCV 2026 release contains **5 dimensions, 14 capability groups, 25 tasks, 6,092 QA pairs, and results for 18 state-of-the-art MLLMs**.
+RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied intelligence into diagnostic abilities rather than reporting only end-to-end task success. It covers the full execution pipeline from instruction comprehension and perception to generalized planning, affordance reasoning, and failure analysis. The ECCV 2026 release contains **5 dimensions, 14 capability groups, 32 subtasks, 6,092 QA pairs, and results for 18 state-of-the-art MLLMs**.
 
 <p align="center">
   <img src="assets/teaser.jpg" alt="RoboBench overview" width="900">
@@ -44,7 +46,7 @@ RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied 
 
 ### ✨ What RoboBench Provides
 
-- **Fine-grained embodied evaluation**: 5 cognitive dimensions, 14 capability groups, 25 tasks, and 6,092 QA pairs for diagnosing where MLLMs succeed or fail as robot brains.
+- **Fine-grained embodied evaluation**: 5 cognitive dimensions, 14 capability groups, 32 subtasks, and 6,092 QA pairs for diagnosing where MLLMs succeed or fail as robot brains.
 - **18-model leaderboard**: closed-source, open-source, and embodied MLLMs are evaluated in the official results release, plus a GPT-5.4 text-only ablation for visual-grounding analysis.
 - **Cross-domain planning tests**: Robot morphology, object type, viewpoint, attributes, and world-knowledge generalization.
 - **MLLM-as-world-simulator evaluation**: Planning outputs are judged with a simulator-style MLLM evaluator for physically grounded task completion.
