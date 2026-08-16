@@ -36,7 +36,7 @@
 
 ## 🔍 Overview
 
-RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied intelligence into diagnostic abilities rather than reporting only end-to-end task success. It covers the full execution pipeline from instruction comprehension and perception to generalized planning, affordance reasoning, and failure analysis. The ECCV 2026 release contains **5 dimensions, 14 capability groups, 25 tasks, 6,092 QA pairs, and results for 18 state-of-the-art MLLMs**.
+RoboBench evaluates MLLMs on robotic manipulation tasks by decomposing embodied intelligence into diagnostic abilities rather than reporting only end-to-end task success. It covers the full execution pipeline from instruction comprehension and perception to generalized planning, affordance reasoning, and failure analysis. The ECCV 2026 release contains **5 dimensions, 14 capability groups, 25 tasks (released as 32 subtask manifests), 6,092 QA pairs, and results for 18 state-of-the-art MLLMs**.
 
 <p align="center">
   <img src="assets/teaser.jpg" alt="RoboBench overview" width="900">
@@ -145,9 +145,14 @@ After all images are downloaded, run the stricter file check:
 robobench --config config/benchmark.yaml inspect-data
 ```
 
-The complete release contains 32 subtasks, 6,092 questions, and 37,126 image
-references. `RoboBench-MCQ` covers 13 subtasks and 1,895 questions;
-`RoboBench-Planning` covers 19 subtasks and 4,197 questions.
+The complete release contains 32 subtask manifests, 6,092 questions, and 37,126
+image references. The 32 manifests correspond to the paper's 25 tasks: two
+planning tasks are sharded by category at release time — `material_affordance`
+into 5 material buckets (articulated / deformable / rigid / special /
+multi-object) and `physical_attribute` into 4 attribute buckets (color / number /
+shape / size) — while all other tasks map one-to-one (25 + 4 + 3 = 32).
+`RoboBench-MCQ` covers 13 subtasks and 1,895 questions; `RoboBench-Planning`
+covers 19 subtasks and 4,197 questions.
 
 Official score tables and model-output JSON files are hosted separately to keep this repository lightweight:
 
