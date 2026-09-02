@@ -11,7 +11,7 @@
   <a href="https://huggingface.co/datasets/lyl010221-pku/RoboBench-Results"><img src="https://img.shields.io/badge/Results-HuggingFace-orange.svg?style=flat&logo=huggingface&logoColor=black" alt="Official results"></a>
   <a href="https://github.com/yulin-luo/RoboBench/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?style=flat&logo=python&logoColor=white" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/ECCV-2026-purple.svg?style=flat" alt="ECCV 2026">
+  <a href="https://eccv.ecva.net/virtual/2026/poster/4213"><img src="https://img.shields.io/badge/ECCV-2026-purple.svg?style=flat" alt="ECCV 2026"></a>
 </p>
 
 ---
@@ -25,11 +25,13 @@
 - 💬 **Prompts and pipeline**: [docs/PROMPTS_AND_PIPELINE.md](docs/PROMPTS_AND_PIPELINE.md)
 - 🧪 **Multiple-Choice Question (MCQ) and Planning evaluation**: [docs/HY_EMBODIED_EVAL.md](docs/HY_EMBODIED_EVAL.md)
 - 💻 **Code**: [github.com/yulin-luo/RoboBench](https://github.com/yulin-luo/RoboBench)
+- 🖼️ **ECCV 2026 poster**: [PDF](https://robo-bench.github.io/static/pdfs/robobench_eccv2026_poster.pdf) · [ECCV virtual page](https://eccv.ecva.net/virtual/2026/poster/4213)
 
 > Accepted to **ECCV 2026**.
 
 ## 📰 News
 
+- 🖼️ **2026.09** - The official **ECCV 2026 poster** is released ([PDF](https://robo-bench.github.io/static/pdfs/robobench_eccv2026_poster.pdf)). Meet us at ECCV 2026 in Malmö, Sept 8–12 — see the [ECCV virtual poster page](https://eccv.ecva.net/virtual/2026/poster/4213).
 - 📊 **2026.07** - Congratulations to [HY-Embodied](https://github.com/Tencent-Hunyuan/HY-Embodied)! **HY-Embodied-0.5 MoT-2B** and **Hy-Embodied-VLM-1.0 A3B** include **RoboBench-MCQ** and **RoboBench-Planning** as part of their official evaluation suite, highlighting RoboBench as a recognized benchmark for embodied foundation models.
 - 🎉 **2026.07** - RoboBench is accepted to **ECCV 2026**. The official release reports results for **18 state-of-the-art MLLMs** with the MLLM-as-world-simulator planning framework.
 - 📰 **2026.07** - RoboBench is featured by [具身智能之心](https://mp.weixin.qq.com/s/SdGEqu_1mz14DhUumTZ3FQ), introducing our benchmark for evaluating MLLMs as embodied brains.
