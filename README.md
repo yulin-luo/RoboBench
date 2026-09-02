@@ -12,6 +12,7 @@
   <a href="https://github.com/yulin-luo/RoboBench/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?style=flat&logo=python&logoColor=white" alt="Python 3.10+">
   <a href="https://eccv.ecva.net/virtual/2026/poster/4213"><img src="https://img.shields.io/badge/ECCV-2026-purple.svg?style=flat" alt="ECCV 2026"></a>
+  <a href="https://www.youtube.com/watch?v=_W3FSK75IRQ"><img src="https://img.shields.io/badge/Video-YouTube-red.svg?style=flat&logo=youtube&logoColor=white" alt="Intro video"></a>
 </p>
 
 ---
@@ -26,6 +27,7 @@
 - 🧪 **Multiple-Choice Question (MCQ) and Planning evaluation**: [docs/HY_EMBODIED_EVAL.md](docs/HY_EMBODIED_EVAL.md)
 - 💻 **Code**: [github.com/yulin-luo/RoboBench](https://github.com/yulin-luo/RoboBench)
 - 🖼️ **ECCV 2026 poster**: [PDF](https://robo-bench.github.io/static/pdfs/robobench_eccv2026_poster.pdf) · [ECCV virtual page](https://eccv.ecva.net/virtual/2026/poster/4213)
+- 🎬 **Intro video (5 min)**: [YouTube](https://www.youtube.com/watch?v=_W3FSK75IRQ)
 
 > Accepted to **ECCV 2026**.
 
