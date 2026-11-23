@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/robobench-mark.webp" width="68" height="68" alt="">
+</p>
+
 <h1 align="center">RoboBench</h1>
 
 <p align="center">
@@ -12,12 +16,18 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?style=flat&logo=python&logoColor=white" alt="Python 3.10+">
   <a href="https://eccv.ecva.net/virtual/2026/poster/4213"><img src="https://img.shields.io/badge/ECCV-2026-purple.svg?style=flat" alt="ECCV 2026"></a>
-  <a href="https://www.youtube.com/watch?v=_W3FSK75IRQ"><img src="https://img.shields.io/badge/Video-YouTube-red.svg?style=flat&logo=youtube&logoColor=white" alt="Intro video"></a>
 </p>
 
-<p align="center"><a href="https://robo-bench.github.io/static/pdfs/robobench_eccv2026_poster.pdf">Poster PDF</a> · <a href="https://robo-bench.github.io/#leaderboard">Leaderboard</a> · <a href="#quick-start">Quick start</a></p>
+<p align="center">
+  <a href="https://robo-bench.github.io/#leaderboard">🏆 Leaderboard</a> ·
+  <a href="https://robo-bench.github.io/static/pdfs/robobench_eccv2026_poster.pdf">🖼️ Poster PDF</a> ·
+  <a href="https://www.youtube.com/watch?v=_W3FSK75IRQ">▶️ Introduction video</a> ·
+  <a href="#quick-start">🚀 Quick start</a>
+</p>
 
-## Overview
+<a name="overview"></a>
+
+## 🧭 Overview
 
 RoboBench evaluates how multimodal large language models understand instructions, interpret robot observations, plan actions, reason about affordances, and diagnose failures. The ECCV 2026 release covers **5 dimensions, 14 capability groups, 25 tasks, and 6,092 questions**. The official leaderboard includes **18 evaluated MLLMs** and separate human and text-only references.
 
@@ -25,7 +35,9 @@ RoboBench evaluates how multimodal large language models understand instructions
   <img src="assets/teaser.jpg" alt="RoboBench overview" width="900">
 </p>
 
-## News
+<a name="news"></a>
+
+## 📰 News
 
 - **2026.11** — [ACE-Brain-0.7](https://arxiv.org/abs/2611.26519) reports task decomposition, next-subtask prediction, and step completion results on 3,979 RoboBench questions.
 - **2026.09** — Li Auto reports results for two [ME-VLM variants](https://arxiv.org/html/2609.24526v1#S6), also presented in the [ME-Brain-1.0](https://arxiv.org/html/2609.24271v1#S7) cognitive-core evaluation.
@@ -34,7 +46,9 @@ RoboBench evaluates how multimodal large language models understand instructions
 - **2026.07** — RoboBench was accepted to ECCV 2026. The [official leaderboard](https://robo-bench.github.io/#leaderboard) reports results for 18 MLLMs.
 - **2026.07** — RoboBench was featured by [具身智能之心](https://mp.weixin.qq.com/s/SdGEqu_1mz14DhUumTZ3FQ).
 
-## Benchmark and dataset
+<a name="benchmark-and-dataset"></a>
+
+## 🧩 Benchmark and dataset
 
 | Dimension | Representative capabilities | Evaluation type |
 | --- | --- | --- |
@@ -53,7 +67,9 @@ The dataset contains **32 subtask manifests and 37,126 image references**. Two p
 
 The official results include score tables and raw model outputs covering proprietary, open-weight, and embodied models. [Leaderboard](https://robo-bench.github.io/#leaderboard) · [Results on Hugging Face](https://huggingface.co/datasets/lyl010221-pku/RoboBench-Results) · [Full model list and dataset breakdown](docs/reference/BENCHMARK.md)
 
-## External evaluations
+<a name="external-evaluations"></a>
+
+## 🌐 External evaluations
 
 | Team | Models | Reported evaluation |
 | --- | --- | --- |
@@ -64,7 +80,9 @@ The official results include score tables and raw model outputs covering proprie
 
 Evaluation subsets, inputs, and scoring vary by report. See [external evaluations](docs/EXTERNAL_EVALUATIONS.md) for scores, comparison models, and protocol details.
 
-## Quick start
+<a name="quick-start"></a>
+
+## 🚀 Quick start
 
 Use a Bash shell with Python 3.10 or later. The example uses OpenAI-compatible endpoints. See the [run guide](docs/guides/QUICKSTART.md) for the full workflow.
 
@@ -135,7 +153,9 @@ The pipeline runs inference, evaluation, and score aggregation across repeated r
 robobench --config config/benchmark.yaml pipeline --repeats 3
 ```
 
-## Evaluate RoboBench-MCQ and RoboBench-Planning
+<a name="evaluate-robobench-mcq-and-robobench-planning"></a>
+
+## 🧪 Evaluate RoboBench-MCQ and RoboBench-Planning
 
 After serving a configured HY-Embodied model through an OpenAI-compatible endpoint, run one subset using the repository helper.
 
@@ -145,7 +165,9 @@ ROBOBENCH_MODEL=hy_a3b bash scripts/run_hy_embodied_eval.sh mcq
 
 Replace `mcq` with `planning` or `all` as needed. See the [HY-Embodied guide](docs/guides/HY_EMBODIED_EVAL.md) for serving, validation, and the maintained protocol mapping.
 
-## How scoring works
+<a name="how-scoring-works"></a>
+
+## 📏 How scoring works
 
 - **Multiple-choice and yes/no** responses are normalized and matched to the reference answer.
 - **Planning Q1** measures plan correctness and task completion using an MLLM judge as a world simulator. **Q2** scores the next action. **Q3** checks subtask completion.
@@ -153,7 +175,9 @@ Replace `mcq` with `planning` or `all` as needed. See the [HY-Embodied guide](do
 
 See the [evaluator reference](docs/reference/BENCHMARK.md#evaluation-metrics) and the [prompt and pipeline guide](docs/reference/PROMPTS_AND_PIPELINE.md) for the prompt builder example and judge implementation.
 
-## Repository layout
+<a name="repository-layout"></a>
+
+## 🗂️ Repository layout
 
 | Directory | Contents |
 | --- | --- |
@@ -165,7 +189,9 @@ See the [evaluator reference](docs/reference/BENCHMARK.md#evaluation-metrics) an
 
 [Documentation index](docs/README.md) · [Configuration reference](docs/reference/CONFIGURATION.md) · [Development and tests](docs/README.md#development)
 
-## Citation
+<a name="citation"></a>
+
+## 📚 Citation
 
 If you use RoboBench in your research, please cite:
 
@@ -181,6 +207,8 @@ If you use RoboBench in your research, please cite:
 }
 ```
 
-## License
+<a name="license"></a>
+
+## 📜 License
 
 This repository is released under the [MIT License](LICENSE).
