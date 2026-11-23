@@ -33,10 +33,36 @@
 
 ## 📰 News
 
+- **2026.11** — Congratulations to the [ACE-Brain team](https://arxiv.org/abs/2611.26519) on ACE-Brain-0.7! Their evaluation uses 3,979 RoboBench questions on task decomposition, next-subtask prediction, and step completion, with natural-language answers for the first two tasks.
+- **2026.09** — Li Auto reports RoboBench results for both [ME-VLM variants](https://arxiv.org/html/2609.24526v1#S6), also featured in the [ME-Brain-1.0](https://arxiv.org/html/2609.24271v1#S7) cognitive-core evaluation.
 - 🖼️ **2026.09** - The official **ECCV 2026 poster** is released ([PDF](https://robo-bench.github.io/static/pdfs/robobench_eccv2026_poster.pdf)). Meet us at ECCV 2026 in Malmö, Sept 8–12 — see the [ECCV virtual poster page](https://eccv.ecva.net/virtual/2026/poster/4213).
 - 📊 **2026.07** - Congratulations to [HY-Embodied](https://github.com/Tencent-Hunyuan/HY-Embodied)! **HY-Embodied-0.5 MoT-2B** and **Hy-Embodied-VLM-1.0 A3B** include **RoboBench-MCQ** and **RoboBench-Planning** as part of their official evaluation suite, highlighting RoboBench as a recognized benchmark for embodied foundation models.
 - 🎉 **2026.07** - RoboBench is accepted to **ECCV 2026**. The official release reports results for **18 state-of-the-art MLLMs** with the MLLM-as-world-simulator planning framework.
 - 📰 **2026.07** - RoboBench is featured by [具身智能之心](https://mp.weixin.qq.com/s/SdGEqu_1mz14DhUumTZ3FQ), introducing our benchmark for evaluating MLLMs as embodied brains.
+
+## External evaluations
+
+RoboBench appears in the evaluation reports for ACE-Brain-0.7 (ACE Robotics),
+ME-VLM (Li Auto), HY-Embodied (Tencent), and EmbodiedMind (ZTE). The reports
+use different subsets and scoring protocols.
+
+- [ACE-Brain-0.7](https://arxiv.org/abs/2611.26519) reports natural-language
+  planning and next-subtask answers from visual observations, plus step
+  completion, on 3,979 RoboBench questions.
+- [ME-VLM](https://arxiv.org/html/2609.24526v1#S6) reports Planning,
+  Perception, Affordance, and Error results for its 4B and 35B-A3B variants.
+  [ME-Brain-1.0](https://arxiv.org/html/2609.24271v1#S7) reports the same
+  ME-VLM results for its cognitive core.
+- [HY-Embodied](https://github.com/Tencent-Hunyuan/HY-Embodied) reports
+  RoboBench-MCQ and RoboBench-Planning for its 0.5 MoT-2B, 0.5 A30B, and
+  VLM-1.0 A3B models. The [HY evaluation guide](docs/HY_EMBODIED_EVAL.md) documents the
+  RoboBench helper.
+- [EmbodiedMind](https://arxiv.org/html/2609.19659v1#S4) reports RoboBench
+  task-planning scores for its 8B and 27B models.
+
+See [external results and evaluation protocols](docs/EXTERNAL_EVALUATIONS.md)
+for scores, additional models evaluated by these teams, and how the settings
+relate to the ECCV leaderboard.
 
 ## 🔍 Overview
 
