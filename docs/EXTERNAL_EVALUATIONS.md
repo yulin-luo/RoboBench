@@ -54,7 +54,7 @@ Error result is listed as unavailable.
 
 The [HY-Embodied VLM-1.0 report, Tables 2–3](https://arxiv.org/html/2607.12894v1)
 reports these scores, including its comparison runs of Embodied-R1.5 and
-Cosmos3-Nano. Use the [HY evaluation guide](HY_EMBODIED_EVAL.md) for the
+Cosmos3-Nano. Use the [HY evaluation guide](guides/HY_EMBODIED_EVAL.md) for the
 available RoboBench helper and the status of protocol alignment.
 
 ## ZTE · Task planning

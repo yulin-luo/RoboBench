@@ -8,16 +8,16 @@ The public code release includes the prompt utilities needed to run inference an
 
 | Purpose | Public file |
 | --- | --- |
-| Prompt construction from released `questions.json` and `system_prompt.json` | `src/robobench/data/dataset.py` |
-| API-ready multimodal message construction | `src/robobench/prompts/builder.py` |
-| Single-arm video-to-task/step description template | `src/robobench/prompts/robot_types/single_arm.py` |
-| Dual-arm video-to-task/step prompt set | `src/robobench/prompts/robot_types/dual_arm.py` |
-| Mobile-manipulator video-to-task/step template | `src/robobench/prompts/robot_types/mobile_manipulation.py` |
-| Natural-language step to predefined function conversion | `src/robobench/prompts/robot_types/language_to_function.py` |
-| Explicit-to-implicit instruction conversion | `src/robobench/prompts/robot_types/explicit_to_implicit.py` |
-| Shared planning templates and action vocabulary | `src/robobench/prompts/templates/planning.py` |
-| Production Q1 world-simulator judge prompt and Q2/Q3 evaluator prompts | `src/robobench/evaluation/planning.py` |
-| Multiple-choice answer extraction and exact scoring | `src/robobench/evaluation/multi_choice.py` |
+| Prompt construction from released `questions.json` and `system_prompt.json` | [`src/robobench/data/dataset.py`](../../src/robobench/data/dataset.py) |
+| API-ready multimodal message construction | [`src/robobench/prompts/builder.py`](../../src/robobench/prompts/builder.py) |
+| Single-arm video-to-task/step description template | [`src/robobench/prompts/robot_types/single_arm.py`](../../src/robobench/prompts/robot_types/single_arm.py) |
+| Dual-arm video-to-task/step prompt set | [`src/robobench/prompts/robot_types/dual_arm.py`](../../src/robobench/prompts/robot_types/dual_arm.py) |
+| Mobile-manipulator video-to-task/step template | [`src/robobench/prompts/robot_types/mobile_manipulation.py`](../../src/robobench/prompts/robot_types/mobile_manipulation.py) |
+| Natural-language step to predefined function conversion | [`src/robobench/prompts/robot_types/language_to_function.py`](../../src/robobench/prompts/robot_types/language_to_function.py) |
+| Explicit-to-implicit instruction conversion | [`src/robobench/prompts/robot_types/explicit_to_implicit.py`](../../src/robobench/prompts/robot_types/explicit_to_implicit.py) |
+| Shared planning templates and action vocabulary | [`src/robobench/prompts/templates/planning.py`](../../src/robobench/prompts/templates/planning.py) |
+| Production Q1 world-simulator judge prompt and Q2/Q3 evaluator prompts | [`src/robobench/evaluation/planning.py`](../../src/robobench/evaluation/planning.py) |
+| Multiple-choice answer extraction and exact scoring | [`src/robobench/evaluation/multi_choice.py`](../../src/robobench/evaluation/multi_choice.py) |
 
 For most users, `RoboBenchDataset` is the data entry point. It locates exactly
 one released `questions.json` file for each configured subtask, constructs the
@@ -77,3 +77,20 @@ The public evaluation path is implemented in `src/robobench/evaluation/`:
 For planning, Q1 uses `PlanningEvaluator` with the production `PROMPT_V3` MLLM-as-world-simulator judge prompt that scores node correctness and embodied task completion. Q2 extracts and compares the next action step. Q3 normalizes model outputs into yes/no decisions.
 
 `src/robobench/prompts/templates/planning.py` contains shared planning templates and earlier extraction/evaluation helpers. For reproducing official planning scores, use the evaluator path in `src/robobench/evaluation/planning.py`.
+
+## Prompt builder example
+
+```python
+from robobench.data.dataset import RoboBenchDataset
+from robobench.prompts.builder import PromptBuilder
+
+dataset = RoboBenchDataset("data/RoboBench-hf")
+questions = dataset.load_questions(
+    "perception_reasoning",
+    "static_attribute",
+    max_samples=1,
+)
+builder = PromptBuilder()
+prompts = builder.build(questions, mode="base64")
+builder.save(prompts, "prompts.jsonl")
+```

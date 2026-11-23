@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 from robobench import cli
@@ -94,6 +95,6 @@ def test_evaluate_filters_to_one_subtask(monkeypatch, benchmark_config, tmp_path
     cli.cmd_evaluate(evaluate_args(tmp_path))
 
     assert len(RecordingExecutor.calls) == 1
-    assert RecordingExecutor.calls[0]["raw_responses"].endswith(
-        "perception_reasoning_tool_usage/raw.json"
+    assert Path(RecordingExecutor.calls[0]["raw_responses"]) == (
+        results_root / "test-run" / "test_model" / "perception_reasoning_tool_usage" / "raw.json"
     )
